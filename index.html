@@ -5,6 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="本地简历编辑、预览、导出与版本管理工具" />
     <title>nnresume</title>
+    <script>
+      (() => {
+        try {
+          const preference = localStorage.getItem("nnresume-theme-v1");
+          const theme = preference === "light" || preference === "dark"
+            ? preference
+            : (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+          document.documentElement.dataset.theme = theme;
+        } catch (_) {
+          document.documentElement.dataset.theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        }
+      })();
+    </script>
     <link rel="stylesheet" href="editor.css" />
     <script src="editor.js" defer></script>
   </head>
@@ -25,6 +38,14 @@
           <span id="git-status-chip" class="status-chip neutral">Git 检查中</span>
         </div>
         <div class="header-actions">
+          <label class="theme-control">
+            <span>主题</span>
+            <select id="theme-select" aria-label="界面主题">
+              <option value="system">系统</option>
+              <option value="light">浅色</option>
+              <option value="dark">深色</option>
+            </select>
+          </label>
           <button id="save-button" class="button secondary" type="button">保存配置</button>
           <button id="export-button" class="button primary" type="button">导出版本</button>
         </div>

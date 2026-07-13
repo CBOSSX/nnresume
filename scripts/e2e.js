@@ -34,6 +34,7 @@ async function startLocalServer() {
   };
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 1 });
+  await page.emulateMedia({ colorScheme: "dark" });
   page.on("dialog", (dialog) => dialog.accept());
   const assertTabAlignment = async () => {
     const tabAlignment = await page.locator(".tabs").evaluate((tabs) => {
@@ -54,10 +55,51 @@ async function startLocalServer() {
     assert.ok(tabAlignment.indicatorToTabX < 0.5);
     assert.ok(tabAlignment.labelToTabY < 0.5);
   };
+  const assertTabsAlignWithEditor = async () => {
+    const edgeDistance = await page.evaluate(() => Math.abs(
+      document.querySelector(".tabs").getBoundingClientRect().right
+        - document.querySelector(".control-panel").getBoundingClientRect().right,
+    ));
+    assert.ok(edgeDistance < 0.5, `tabs and editor right edges differ by ${edgeDistance}px`);
+  };
 
   try {
     await page.goto(baseUrl, { waitUntil: "networkidle" });
     await page.locator('[data-path="basics.name"]').waitFor();
+    const themeSelect = page.locator("#theme-select");
+    assert.equal(await themeSelect.inputValue(), "system");
+    assert.deepEqual(await themeSelect.locator("option").allTextContents(), ["系统", "浅色", "深色"]);
+    assert.deepEqual(await page.evaluate(() => ({
+      theme: document.documentElement.dataset.theme,
+      colorScheme: getComputedStyle(document.documentElement).colorScheme,
+      panelBackground: getComputedStyle(document.querySelector(".control-panel")).backgroundColor,
+      inputBackground: getComputedStyle(document.querySelector(".field input")).backgroundColor,
+      dialogBackground: getComputedStyle(document.querySelector(".dialog")).backgroundColor,
+      previewStageBackground: getComputedStyle(document.querySelector(".preview-stage")).backgroundColor,
+    })), {
+      theme: "dark",
+      colorScheme: "dark",
+      panelBackground: "rgba(20, 25, 37, 0.97)",
+      inputBackground: "rgb(17, 23, 34)",
+      dialogBackground: "rgb(23, 28, 41)",
+      previewStageBackground: "rgb(11, 15, 23)",
+    });
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.waitForFunction(() => document.documentElement.dataset.theme === "light");
+    await themeSelect.selectOption("dark");
+    assert.equal(await page.evaluate(() => localStorage.getItem("nnresume-theme-v1")), "dark");
+    assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
+    await page.reload({ waitUntil: "networkidle" });
+    await page.locator('[data-path="basics.name"]').waitFor();
+    assert.equal(await page.locator("#theme-select").inputValue(), "dark");
+    assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
+    await page.locator("#theme-select").selectOption("light");
+    await page.emulateMedia({ colorScheme: "dark" });
+    assert.equal(await page.locator("html").getAttribute("data-theme"), "light");
+    assert.equal(await page.evaluate(() => localStorage.getItem("nnresume-theme-v1")), "light");
+    await page.locator("#theme-select").selectOption("system");
+    await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
+    assert.equal(await page.evaluate(() => localStorage.getItem("nnresume-theme-v1")), null);
     const logo = page.locator(".brand-logo");
     await logo.waitFor();
     assert.deepEqual(await logo.evaluate((image) => ({
@@ -72,8 +114,9 @@ async function startLocalServer() {
     assert.ok(previewFrame);
     assert.deepEqual(await previewFrame.evaluate(() => ({
       hasInternalScroll: document.documentElement.scrollHeight > document.documentElement.clientHeight,
+      pageBackground: getComputedStyle(document.documentElement).backgroundColor,
       pageShadow: getComputedStyle(document.querySelector(".page")).boxShadow,
-    })), { hasInternalScroll: false, pageShadow: "none" });
+    })), { hasInternalScroll: false, pageBackground: "rgb(255, 255, 255)", pageShadow: "none" });
     assert.equal(await page.locator(".tabs").getAttribute("data-active-tab"), "edit");
     assert.deepEqual(await page.locator("#layout-status").evaluate((status) => ({
       beforeZoom: status.nextElementSibling?.classList.contains("zoom-control") || false,
@@ -89,11 +132,13 @@ async function startLocalServer() {
       saveButton: document.getElementById("save-button"),
       saveStatus: document.getElementById("save-status"),
       tabs: document.querySelector(".tabs"),
+      theme: document.querySelector(".theme-control"),
       zoom: document.querySelector(".zoom-control"),
     }).map(([name, element]) => [name, element.getBoundingClientRect().height])));
     Object.values(controlHeights).forEach((height) => assert.ok(Math.abs(height - 36) < 0.5));
 
     await assertTabAlignment();
+    await assertTabsAlignWithEditor();
 
     const savedTabsLeft = await page.locator(".tabs").evaluate((tabs) => tabs.getBoundingClientRect().left);
     const nameInput = page.locator('[data-path="basics.name"]');
@@ -101,6 +146,7 @@ async function startLocalServer() {
     await page.waitForFunction(() => document.getElementById("save-status")?.textContent === "有未保存修改");
     const dirtyTabsLeft = await page.locator(".tabs").evaluate((tabs) => tabs.getBoundingClientRect().left);
     assert.ok(Math.abs(savedTabsLeft - dirtyTabsLeft) < 0.5);
+    await assertTabsAlignWithEditor();
     await nameInput.fill(original.basics.name);
     await page.waitForFunction(() => document.getElementById("save-status")?.textContent === "配置已保存");
 
@@ -181,6 +227,16 @@ async function startLocalServer() {
     await assertTabAlignment();
     await page.getByText(gitStatus.branch, { exact: true }).waitFor();
     await page.screenshot({ path: screenshotPath, fullPage: true });
+
+    await page.setViewportSize({ width: 640, height: 1000 });
+    assert.deepEqual(await page.locator(".theme-control").evaluate((control) => {
+      const controlRect = control.getBoundingClientRect();
+      const headerRect = control.closest(".app-header").getBoundingClientRect();
+      return {
+        insideHeader: controlRect.left >= headerRect.left && controlRect.right <= headerRect.right,
+        viewportFits: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      };
+    }), { insideHeader: true, viewportFits: true });
   } finally {
     await putConfig(original).catch(() => {});
     fs.rmSync(uploadedPhotoPath, { force: true });
