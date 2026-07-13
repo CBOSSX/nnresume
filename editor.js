@@ -1,7 +1,7 @@
 (function resumeEditor() {
   "use strict";
 
-  const DRAFT_KEY = "nnresume-draft-v1";
+  const DRAFT_PREFIX = "nnresume-draft-v2";
   const LEGACY_DRAFT_KEY = "resume-manager-draft-v1";
   const THEME_KEY = "nnresume-theme-v1";
   const themeQuery = window.matchMedia("(prefers-color-scheme: dark)");
@@ -50,6 +50,8 @@
     previewZoom: 1,
     previewFit: true,
     theme: "system",
+    workspaceId: "unknown",
+    revision: null,
   };
   const MIN_PREVIEW_ZOOM = 0.35;
   const MAX_PREVIEW_ZOOM = 1.2;
@@ -64,17 +66,16 @@
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
   const clone = (value) => JSON.parse(JSON.stringify(value));
+  const draftKey = () => `${DRAFT_PREFIX}:${state.workspaceId}:${state.revision || "unloaded"}`;
   const readDraft = () => {
-    const current = localStorage.getItem(DRAFT_KEY);
+    const current = localStorage.getItem(draftKey());
     if (current) return JSON.parse(current);
     const legacy = localStorage.getItem(LEGACY_DRAFT_KEY);
     if (!legacy) return null;
-    localStorage.setItem(DRAFT_KEY, legacy);
-    localStorage.removeItem(LEGACY_DRAFT_KEY);
     return JSON.parse(legacy);
   };
-  const clearDraft = () => {
-    localStorage.removeItem(DRAFT_KEY);
+  const clearDraft = (key = draftKey()) => {
+    localStorage.removeItem(key);
     localStorage.removeItem(LEGACY_DRAFT_KEY);
   };
   const readTheme = () => {
@@ -118,6 +119,15 @@
     return data;
   }
 
+  async function loadConfigFromDisk() {
+    const response = await fetch("/api/config", { headers: { "Content-Type": "application/json" } });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `请求失败：${response.status}`);
+    state.workspaceId = response.headers.get("X-Nnresume-Workspace") || state.workspaceId;
+    state.revision = response.headers.get("X-Nnresume-Revision") || state.revision;
+    return data;
+  }
+
   function showToast(message) {
     clearTimeout(toastTimer);
     elements.toast.textContent = message;
@@ -144,7 +154,7 @@
   }
 
   function saveDraft() {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify({ savedAt: Date.now(), config: state.config }));
+    localStorage.setItem(draftKey(), JSON.stringify({ savedAt: Date.now(), revision: state.revision, config: state.config }));
   }
 
   function postPreview() {
@@ -403,11 +413,13 @@
   async function saveConfig() {
     elements.validation.hidden = true;
     elements.saveButton.disabled = true;
+    const previousDraftKey = draftKey();
     try {
-      const saved = await api("/api/config", { method: "PUT", body: JSON.stringify(state.config) });
-      state.config = clone(saved);
-      state.saved = clone(saved);
-      clearDraft();
+      const saved = await api("/api/config", { method: "PUT", headers: state.revision ? { "If-Match": `"${state.revision}"` } : {}, body: JSON.stringify(state.config) });
+      const fresh = await loadConfigFromDisk();
+      state.config = clone(fresh);
+      state.saved = clone(fresh);
+      clearDraft(previousDraftKey);
       await loadGit();
       updateStatus();
       showToast("配置已保存");
@@ -499,7 +511,7 @@
       <div class="git-row"><span>工作区</span><strong>${git.dirty ? "有未提交变更" : "干净"}</strong></div>
       ${git.changes.length ? `<div class="git-changes">${escapeHtml(git.changes.join("\n"))}</div>` : ""}`;
     elements.fetchButton.disabled = !git.remote;
-    elements.pullButton.disabled = !git.remote || git.dirty;
+    elements.pullButton.disabled = !git.remote || git.dirty || state.dirty;
     elements.pushButton.disabled = !git.remote || git.behind > 0;
   }
 
@@ -526,9 +538,19 @@
   }
 
   async function syncGit(action, successMessage) {
+    if (action === "pull" && state.dirty) return showToast("请先保存或丢弃未保存修改，再拉取远程");
     [elements.fetchButton, elements.pullButton, elements.pushButton].forEach((button) => { button.disabled = true; });
     try {
       state.git = await api(`/api/git/${action}`, { method: "POST", body: "{}" });
+      if (action === "pull") {
+        const previousDraftKey = draftKey();
+        const fresh = await loadConfigFromDisk();
+        clearDraft(previousDraftKey);
+        state.config = clone(fresh);
+        state.saved = clone(fresh);
+        renderEditor();
+        postPreview();
+      }
       renderGit();
       updateStatus();
       showToast(successMessage);
@@ -544,9 +566,10 @@
     try {
       const manifest = await api("/api/exports", {
         method: "POST",
+        headers: state.revision ? { "If-Match": `"${state.revision}"` } : {},
         body: JSON.stringify({ config: state.config, label: elements.exportLabel.value }),
       });
-      const saved = await api("/api/config");
+      const saved = await loadConfigFromDisk();
       state.config = clone(saved);
       state.saved = clone(saved);
       clearDraft();
@@ -669,7 +692,7 @@
     applyTheme(readTheme());
     setupEvents();
     try {
-      const [config, templates] = await Promise.all([api("/api/config"), api("/api/templates")]);
+      const [config, templates] = await Promise.all([loadConfigFromDisk(), api("/api/templates")]);
       state.config = clone(config);
       state.saved = clone(config);
       state.templates = templates;

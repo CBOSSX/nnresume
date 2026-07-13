@@ -86,3 +86,31 @@ test("server imports a validated profile photo into controlled assets", async (c
   });
   assert.equal(oversized.status, 413);
 });
+
+test("server exposes config revision and rejects stale writes", async (context) => {
+  const workspaceRoot = createWorkspace();
+  const server = createServer({ appRoot, workspaceRoot });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  context.after(() => server.close());
+  const port = server.address().port;
+  const url = `http://127.0.0.1:${port}/api/config`;
+  const first = await fetch(url);
+  const revision = first.headers.get("x-nnresume-revision");
+  const workspace = first.headers.get("x-nnresume-workspace");
+  assert.match(revision, /^[a-f0-9]{16}$/);
+  assert.match(workspace, /^[a-f0-9]{16}$/);
+
+  const external = readConfig(workspaceRoot);
+  external.basics.title = "Remote update";
+  fs.writeFileSync(path.join(workspaceRoot, "resume.json"), `${JSON.stringify(external, null, 2)}\n`);
+
+  const stale = await first.json();
+  stale.basics.title = "Stale browser update";
+  const response = await fetch(url, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", "If-Match": `"${revision}"` },
+    body: JSON.stringify(stale),
+  });
+  assert.equal(response.status, 412);
+  assert.equal(readConfig(workspaceRoot).basics.title, "Remote update");
+});

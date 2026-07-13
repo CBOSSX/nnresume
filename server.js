@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const fs = require("fs");
 const http = require("http");
 const path = require("path");
@@ -36,9 +37,39 @@ const STATIC_FILES = new Set([
 ]);
 const EXPORT_FILES = new Set(["resume.pdf", "resume.png", "resume.json", "resume.html", "manifest.json"]);
 
-function sendJson(response, status, data) {
-  response.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+function sendJson(response, status, data, headers = {}) {
+  response.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...headers });
   response.end(JSON.stringify(data));
+}
+
+
+function hashValue(value) {
+  return crypto.createHash("sha256").update(value).digest("hex");
+}
+
+function getWorkspaceId(root) {
+  return hashValue(fs.realpathSync(root)).slice(0, 16);
+}
+
+function getConfigRevision(root) {
+  return hashValue(fs.readFileSync(path.join(root, "resume.json"))).slice(0, 16);
+}
+
+function configHeaders(root) {
+  const revision = getConfigRevision(root);
+  return { ETag: `"${revision}"`, "X-Nnresume-Workspace": getWorkspaceId(root), "X-Nnresume-Revision": revision };
+}
+
+function assertConfigRevision(root, request) {
+  const expected = request.headers["if-match"];
+  if (!expected) return;
+  const current = getConfigRevision(root);
+  const normalized = String(expected).replace(/^W\//, "").replace(/^"|"$/g, "");
+  if (normalized !== current) {
+    const error = new Error("磁盘配置已变化，请重新加载后再保存，避免覆盖新内容");
+    error.statusCode = 412;
+    throw error;
+  }
 }
 
 function sendFile(response, file) {
@@ -114,7 +145,7 @@ function createServer(options = {}) {
       const pathname = decodeURIComponent(url.pathname);
 
       if (request.method === "GET" && pathname === "/api/config") {
-        return sendJson(response, 200, readConfig(workspaceRoot));
+        return sendJson(response, 200, readConfig(workspaceRoot), configHeaders(workspaceRoot));
       }
       if (request.method === "GET" && pathname === "/api/schema") {
         return sendFile(response, path.join(appRoot, "resume.schema.json"));
@@ -124,10 +155,12 @@ function createServer(options = {}) {
       }
       if (request.method === "PUT" && pathname === "/api/config") {
         const body = await readJsonBody(request);
+        assertConfigRevision(workspaceRoot, request);
         const validation = validateConfig(body);
         if (!validation.valid) return sendJson(response, 400, { error: "配置校验失败", errors: validation.errors });
         validateTemplate(body);
-        return sendJson(response, 200, writeConfigAtomic(workspaceRoot, body));
+        const saved = writeConfigAtomic(workspaceRoot, body);
+        return sendJson(response, 200, saved, configHeaders(workspaceRoot));
       }
       if (request.method === "PUT" && pathname === "/api/assets/photo") {
         const body = await readBinaryBody(request);
@@ -139,6 +172,7 @@ function createServer(options = {}) {
         const validation = validateConfig(body.config);
         if (!validation.valid) return sendJson(response, 400, { error: "配置校验失败", errors: validation.errors });
         validateTemplate(body.config);
+        assertConfigRevision(workspaceRoot, request);
         const saved = writeConfigAtomic(workspaceRoot, body.config);
         const manifest = await exportResume({ appRoot, workspaceRoot, config: saved, label: body.label });
         return sendJson(response, 201, manifest);
@@ -220,4 +254,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { createServer, readBinaryBody, readJsonBody };
+module.exports = { createServer, getConfigRevision, getWorkspaceId, readBinaryBody, readJsonBody };

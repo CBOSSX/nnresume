@@ -28,14 +28,14 @@ npx nnresume
 
 ```bash
 nnresume init [directory] [--default] [--repo owner/name | --remote url]
-nnresume [directory] [--port 4173] [--no-open]
-nnresume start [directory] [--port 4173] [--no-open]
+nnresume [directory] [--port 4173] [--no-open] [--background]
+nnresume start [directory] [--port 4173] [--no-open] [--background]
 nnresume export [directory] --label backend-v2
 nnresume default [directory | --clear]
 nnresume doctor [directory]
 ```
 
-未传工作区目录时，nnresume 先使用当前目录中的工作区；当前目录不是工作区时，再使用默认工作区。因此进入其他简历工作区后仍可直接运行 `nnresume`，不会被全局默认值覆盖。显式传入目录始终优先。
+未传工作区目录时，nnresume 先使用当前目录中的工作区；当前目录不是工作区时，再使用默认工作区。因此进入其他简历工作区后仍可直接运行 `nnresume`，不会被全局默认值覆盖。显式传入目录始终优先。需要释放当前终端时，可运行 `nnresume --background` 将编辑器留在后台。
 
 ```bash
 # 设置或替换默认工作区
