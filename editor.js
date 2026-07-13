@@ -3,6 +3,8 @@
 
   const DRAFT_KEY = "nnresume-draft-v1";
   const LEGACY_DRAFT_KEY = "resume-manager-draft-v1";
+  const THEME_KEY = "nnresume-theme-v1";
+  const themeQuery = window.matchMedia("(prefers-color-scheme: dark)");
   const elements = {
     form: document.getElementById("editor-form"),
     frame: document.getElementById("preview-frame"),
@@ -13,6 +15,7 @@
     zoomFit: document.getElementById("zoom-fit"),
     zoomValue: document.getElementById("zoom-value"),
     tabs: document.querySelector(".tabs"),
+    themeSelect: document.getElementById("theme-select"),
     saveButton: document.getElementById("save-button"),
     exportButton: document.getElementById("export-button"),
     saveStatus: document.getElementById("save-status"),
@@ -46,6 +49,7 @@
     assetVersion: 0,
     previewZoom: 1,
     previewFit: true,
+    theme: "system",
   };
   const MIN_PREVIEW_ZOOM = 0.35;
   const MAX_PREVIEW_ZOOM = 1.2;
@@ -73,6 +77,27 @@
     localStorage.removeItem(DRAFT_KEY);
     localStorage.removeItem(LEGACY_DRAFT_KEY);
   };
+  const readTheme = () => {
+    try {
+      const theme = localStorage.getItem(THEME_KEY);
+      return theme === "light" || theme === "dark" ? theme : "system";
+    } catch (_) {
+      return "system";
+    }
+  };
+  const resolveTheme = (theme) => theme === "system" ? (themeQuery.matches ? "dark" : "light") : theme;
+  function applyTheme(theme, persist = false) {
+    state.theme = theme === "light" || theme === "dark" ? theme : "system";
+    document.documentElement.dataset.theme = resolveTheme(state.theme);
+    elements.themeSelect.value = state.theme;
+    if (!persist) return;
+    try {
+      if (state.theme === "system") localStorage.removeItem(THEME_KEY);
+      else localStorage.setItem(THEME_KEY, state.theme);
+    } catch (_) {
+      // The selected theme still applies for this page when storage is unavailable.
+    }
+  }
   const canonical = (value) => {
     const copy = clone(value);
     delete copy.updatedAt;
@@ -548,6 +573,10 @@
   }
 
   function setupEvents() {
+    elements.themeSelect.addEventListener("change", () => applyTheme(elements.themeSelect.value, true));
+    themeQuery.addEventListener("change", () => {
+      if (state.theme === "system") applyTheme("system");
+    });
     elements.form.addEventListener("input", (event) => {
       const path = event.target.dataset.path;
       if (!path) return;
@@ -637,6 +666,7 @@
   }
 
   async function initialize() {
+    applyTheme(readTheme());
     setupEvents();
     try {
       const [config, templates] = await Promise.all([api("/api/config"), api("/api/templates")]);
