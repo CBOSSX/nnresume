@@ -41,6 +41,10 @@ test("server exposes templates and rejects an unknown template", async (context)
   const port = server.address().port;
   const templates = await (await fetch(`http://127.0.0.1:${port}/api/templates`)).json();
   assert.deepEqual(templates.map((item) => item.id).sort(), ["classic", "modern"]);
+  const logoResponse = await fetch(`http://127.0.0.1:${port}/nnresume-logo.png`);
+  assert.equal(logoResponse.status, 200);
+  assert.equal(logoResponse.headers.get("content-type"), "image/png");
+  assert.ok((await logoResponse.arrayBuffer()).byteLength > 0);
   const invalid = readConfig(workspaceRoot);
   invalid.template = "missing";
   const response = await fetch(`http://127.0.0.1:${port}/api/config`, {

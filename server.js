@@ -30,6 +30,7 @@ const STATIC_FILES = new Set([
   "index.html",
   "editor.css",
   "editor.js",
+  "nnresume-logo.png",
   "preview.html",
   "resume-renderer.js",
 ]);

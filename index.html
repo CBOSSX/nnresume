@@ -11,20 +11,23 @@
   <body>
     <header class="app-header">
       <div class="brand">
-        <span class="brand-mark">N</span>
-        <div>
-          <h1>nnresume</h1>
-          <p>配置驱动的简历工作台</p>
+        <img class="brand-logo" src="nnresume-logo.png" alt="nnresume" />
+      </div>
+      <nav class="tabs" aria-label="功能切换" data-active-tab="edit">
+        <span class="tab-indicator" aria-hidden="true"></span>
+        <button class="tab active" type="button" data-tab="edit"><span>编辑</span></button>
+        <button class="tab" type="button" data-tab="history"><span>导出历史</span></button>
+        <button class="tab" type="button" data-tab="git"><span>Git</span></button>
+      </nav>
+      <div class="header-controls">
+        <div class="header-status" aria-live="polite">
+          <span id="save-status" class="status-chip neutral">正在载入</span>
+          <span id="git-status-chip" class="status-chip neutral">Git 检查中</span>
         </div>
-      </div>
-      <div class="header-status" aria-live="polite">
-        <span id="save-status" class="status-chip neutral">正在载入</span>
-        <span id="layout-status" class="status-chip neutral">A4 检查中</span>
-        <span id="git-status-chip" class="status-chip neutral">Git 检查中</span>
-      </div>
-      <div class="header-actions">
-        <button id="save-button" class="button secondary" type="button">保存配置</button>
-        <button id="export-button" class="button primary" type="button">导出版本</button>
+        <div class="header-actions">
+          <button id="save-button" class="button secondary" type="button">保存配置</button>
+          <button id="export-button" class="button primary" type="button">导出版本</button>
+        </div>
       </div>
     </header>
 
@@ -38,12 +41,6 @@
 
     <main class="workspace">
       <section class="control-panel" aria-label="简历管理面板">
-        <nav class="tabs" aria-label="功能切换">
-          <button class="tab active" type="button" data-tab="edit">编辑</button>
-          <button class="tab" type="button" data-tab="history">导出历史</button>
-          <button class="tab" type="button" data-tab="git">Git</button>
-        </nav>
-
         <div id="validation-errors" class="validation-errors" hidden></div>
         <section id="edit-panel" class="tab-panel active">
           <form id="editor-form" autocomplete="off"></form>
@@ -81,14 +78,27 @@
 
       <section class="preview-panel" aria-label="实时 A4 预览">
         <div class="preview-toolbar">
-          <div>
-            <strong>实时预览</strong>
-            <span>保存前也会随表单更新</span>
+          <div class="preview-heading">
+            <div>
+              <strong>实时预览</strong>
+              <span>保存前也会随表单更新</span>
+            </div>
           </div>
-          <a class="button ghost compact" href="preview.html" target="_blank">单独打开</a>
+          <div class="preview-tools" aria-label="预览缩放">
+            <span id="layout-status" class="status-chip neutral" aria-live="polite">A4 检查中</span>
+            <div class="zoom-control">
+              <button id="zoom-out" class="preview-tool-button" type="button" aria-label="缩小预览" title="缩小预览">−</button>
+              <output id="zoom-value" aria-live="polite">100%</output>
+              <button id="zoom-in" class="preview-tool-button" type="button" aria-label="放大预览" title="放大预览">＋</button>
+            </div>
+            <button id="zoom-fit" class="preview-tool-button fit-button active" type="button" aria-label="适合窗口" aria-pressed="true" title="适合窗口">适合</button>
+            <a class="preview-tool-button open-preview" href="preview.html" target="_blank" aria-label="单独打开预览" title="单独打开预览">↗</a>
+          </div>
         </div>
-        <div class="preview-stage">
-          <iframe id="preview-frame" title="简历 A4 实时预览" src="preview.html?embedded=1" scrolling="no"></iframe>
+        <div id="preview-stage" class="preview-stage">
+          <div id="preview-canvas" class="preview-canvas">
+            <iframe id="preview-frame" title="简历 A4 实时预览" src="preview.html?embedded=1" scrolling="no"></iframe>
+          </div>
         </div>
       </section>
     </main>
