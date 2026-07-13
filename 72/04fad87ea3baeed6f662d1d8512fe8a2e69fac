@@ -1,0 +1,33 @@
+editor.css
+  s_9f9aa54f81bd91::t_c57c7ed69dee0e 2-4,6-10,12-16,20-27,36,38-46,49-51,53-55,57-63,65,67,70-74,77,80-81,83,85,87-93,103-104,107-108,116-119,123,125,130-175,181-190,194-196,202-221,223,226,229,234-254,257-258,265,268,270-272,274,277-282,284-285,287-288,292-294,296,298,300,305-306,308-310,316-317,325,332-387,410-418,421-424,431-435,443-445,448-461
+editor.js
+  s_9f9aa54f81bd91::t_525c299cd7be78 9-15,38-52,136-166,198-203,226,237,248,263,276,566,575-577,601-614
+index.html
+  s_9f9aa54f81bd91::t_422ab5fd0fdcc2 14,16-30,81-95,98-101
+package.json
+  s_9f9aa54f81bd91::t_43bf7e42f11ac6 18
+scripts/e2e.js
+  s_9f9aa54f81bd91::t_8065b810a09487 38-56,61-68,77-135,166-168,177,179-182
+server.js
+  s_9f9aa54f81bd91::t_1bece3bd34bf9f 33
+test/server.test.js
+  s_9f9aa54f81bd91::t_536259fd9c7d96 44-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "7204fad87ea3baeed6f662d1d8512fe8a2e69fac",
+  "prompts": {},
+  "sessions": {
+    "s_9f9aa54f81bd91": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5a26-a793-7e12-81a5-81fbadaa15d1",
+        "model": "unknown"
+      },
+      "human_author": "CBOSSX <89856974+CBOSSX@users.noreply.github.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
