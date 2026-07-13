@@ -1,0 +1,33 @@
+bin/nnresume.js
+  s_914e6b194f4f6f::t_60b7e78d08e3d4 5
+editor.js
+  s_914e6b194f4f6f::t_f02f18c124cfb1 5,62,72-80,82-102,104,482-491,621-622,624,673-676,683-684
+lib/cli.js
+  s_914e6b194f4f6f::t_ccc4c4d1ae1446 139-144,148-149,151-152,155,157-188,190-191,193,202,303
+scripts/e2e.js
+  s_914e6b194f4f6f::t_3115bcff90cb3e 153-193,262-266
+server.js
+  s_914e6b194f4f6f::t_7ba3d6a63c6ac0 206,213
+test/cli.test.js
+  s_914e6b194f4f6f::t_12f6f5248300b7 2,4,9-16,21-31,39-92
+test/server.test.js
+  s_914e6b194f4f6f::t_e04586df6d533d 8,118-167
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "d5955a4b75713f0a6dbe726ee39d88a7bf56e7c2",
+  "prompts": {},
+  "sessions": {
+    "s_914e6b194f4f6f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5b78-079a-7163-835e-5276aa16f4f7",
+        "model": "unknown"
+      },
+      "human_author": "CBOSSX <89856974+CBOSSX@users.noreply.github.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
