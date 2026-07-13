@@ -8,18 +8,17 @@
 
 ```bash
 npx playwright install chromium
-npx nnresume init my-resume
-cd my-resume
+npx nnresume init my-resume --default
 npx nnresume
 ```
 
-初始化命令会创建独立工作区、执行 `git init -b main` 和初始提交，并优先通过已登录的 GitHub CLI 创建私有仓库。默认仓库名等于初始化目录名，例如 `npx nnresume init my-resume` 会创建 `<当前 GitHub 账号>/my-resume`；也可通过 `--repo owner/name` 指定。GitHub 仓库使用工作区级 HTTPS 凭证配置，不修改全局 Git 设置。未安装或未登录 `gh` 时，可以粘贴任意 Git 远程 URL。
+初始化命令会创建独立工作区、执行 `git init -b main` 和初始提交，并优先通过已登录的 GitHub CLI 创建私有仓库。`--default` 会把该目录保存为默认工作区，之后可以在任意目录运行 `npx nnresume`。默认仓库名等于初始化目录名，例如 `npx nnresume init my-resume` 会创建 `<当前 GitHub 账号>/my-resume`；也可通过 `--repo owner/name` 指定。GitHub 仓库使用工作区级 HTTPS 凭证配置，不修改全局 Git 设置。未安装或未登录 `gh` 时，可以粘贴任意 Git 远程 URL。
 
 已有工作区在新设备上的使用方式：
 
 ```bash
 git clone <private-repository-url>
-cd <repository-directory>
+npx nnresume default <repository-directory>
 npx nnresume
 ```
 
@@ -28,12 +27,28 @@ npx nnresume
 ## CLI
 
 ```bash
-nnresume init [directory] [--repo owner/name | --remote url]
+nnresume init [directory] [--default] [--repo owner/name | --remote url]
 nnresume [directory] [--port 4173] [--no-open]
 nnresume start [directory] [--port 4173] [--no-open]
 nnresume export [directory] --label backend-v2
+nnresume default [directory | --clear]
 nnresume doctor [directory]
 ```
+
+未传工作区目录时，nnresume 先使用当前目录中的工作区；当前目录不是工作区时，再使用默认工作区。因此进入其他简历工作区后仍可直接运行 `nnresume`，不会被全局默认值覆盖。显式传入目录始终优先。
+
+```bash
+# 设置或替换默认工作区
+nnresume default /path/to/my-resume
+
+# 查看当前默认值
+nnresume default
+
+# 清除默认值
+nnresume default --clear
+```
+
+默认值只保存工作区的绝对路径，不包含简历内容。配置文件位于 `~/.config/nnresume/config.json`；Windows 使用 `%APPDATA%\nnresume\config.json`，设置了 `XDG_CONFIG_HOME` 时会遵循该目录。
 
 ## 工作区
 

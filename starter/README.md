@@ -14,6 +14,14 @@ npx playwright install chromium
 npx nnresume
 ```
 
+如果希望在任意目录启动，可在工作区内执行一次：
+
+```bash
+npx nnresume default .
+```
+
+之后在其他目录运行 `npx nnresume` 会使用这个默认工作区；显式目录和当前目录中的其他 nnresume 工作区仍然优先。
+
 浏览器打开后：
 
 1. 在“编辑”页填写内容；个人照片可在“基本信息”中选择并导入。

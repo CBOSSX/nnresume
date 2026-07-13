@@ -6,6 +6,13 @@
   const elements = {
     form: document.getElementById("editor-form"),
     frame: document.getElementById("preview-frame"),
+    previewStage: document.getElementById("preview-stage"),
+    previewCanvas: document.getElementById("preview-canvas"),
+    zoomOut: document.getElementById("zoom-out"),
+    zoomIn: document.getElementById("zoom-in"),
+    zoomFit: document.getElementById("zoom-fit"),
+    zoomValue: document.getElementById("zoom-value"),
+    tabs: document.querySelector(".tabs"),
     saveButton: document.getElementById("save-button"),
     exportButton: document.getElementById("export-button"),
     saveStatus: document.getElementById("save-status"),
@@ -28,7 +35,21 @@
     diffContent: document.getElementById("diff-content"),
     toast: document.getElementById("toast"),
   };
-  const state = { config: null, saved: null, templates: [], history: [], git: null, dirty: false, overflow: false, assetVersion: 0 };
+  const state = {
+    config: null,
+    saved: null,
+    templates: [],
+    history: [],
+    git: null,
+    dirty: false,
+    overflow: false,
+    assetVersion: 0,
+    previewZoom: 1,
+    previewFit: true,
+  };
+  const MIN_PREVIEW_ZOOM = 0.35;
+  const MAX_PREVIEW_ZOOM = 1.2;
+  const PREVIEW_ZOOM_STEP = 0.1;
   let previewTimer;
   let toastTimer;
 
@@ -112,6 +133,37 @@
     }, 80);
   }
 
+  function applyPreviewZoom(value, options = {}) {
+    const zoom = Math.min(MAX_PREVIEW_ZOOM, Math.max(MIN_PREVIEW_ZOOM, value));
+    const frameWidth = elements.frame.offsetWidth || (210 * 96 / 25.4);
+    const frameHeight = elements.frame.offsetHeight || (297 * 96 / 25.4);
+    state.previewZoom = zoom;
+    state.previewFit = Boolean(options.fit);
+    elements.previewCanvas.style.width = `${frameWidth * zoom}px`;
+    elements.previewCanvas.style.height = `${frameHeight * zoom}px`;
+    elements.frame.style.transform = `scale(${zoom})`;
+    elements.zoomValue.value = `${Math.round(zoom * 100)}%`;
+    elements.zoomValue.textContent = elements.zoomValue.value;
+    elements.zoomOut.disabled = zoom <= MIN_PREVIEW_ZOOM;
+    elements.zoomIn.disabled = zoom >= MAX_PREVIEW_ZOOM;
+    elements.zoomFit.classList.toggle("active", state.previewFit);
+    elements.zoomFit.setAttribute("aria-pressed", String(state.previewFit));
+  }
+
+  function fitPreview() {
+    const stageStyle = getComputedStyle(elements.previewStage);
+    const availableWidth = elements.previewStage.clientWidth
+      - parseFloat(stageStyle.paddingLeft)
+      - parseFloat(stageStyle.paddingRight);
+    const availableHeight = elements.previewStage.clientHeight
+      - parseFloat(stageStyle.paddingTop)
+      - parseFloat(stageStyle.paddingBottom);
+    const frameWidth = elements.frame.offsetWidth || (210 * 96 / 25.4);
+    const frameHeight = elements.frame.offsetHeight || (297 * 96 / 25.4);
+    const scale = Math.min(1, availableWidth / frameWidth, availableHeight / frameHeight);
+    applyPreviewZoom(Number.isFinite(scale) ? scale : 1, { fit: true });
+  }
+
   function markChanged() {
     saveDraft();
     updateStatus();
@@ -143,18 +195,18 @@
       <div class="photo-upload-row">
         ${photo ? `<img class="photo-upload-preview" src="${escapeHtml(previewUrl)}" alt="当前个人照片" />` : '<div class="photo-upload-preview photo-upload-placeholder">暂无照片</div>'}
         <div class="photo-upload-controls">
-          <div class="photo-upload-actions">
+          <small>支持 PNG、JPEG、WebP，最大 5 MB；图片保存在当前私有工作区的 assets/ 中。</small>
+          <div class="photo-upload-inline">
+            <label class="photo-path-field" title="通常无需手动修改">
+              <span>资源路径</span>
+              <input type="text" data-path="basics.photo" value="${escapeHtml(value)}" placeholder="assets/profile.png" />
+            </label>
             <label class="photo-picker">
               <span class="button secondary compact">选择并导入图片</span>
               <input type="file" accept="image/png,image/jpeg,image/webp" data-photo-upload aria-label="选择并导入个人照片" />
             </label>
             ${photo ? '<button class="button ghost compact" type="button" data-action="remove-photo">从简历移除</button>' : ""}
           </div>
-          <small>支持 PNG、JPEG、WebP，最大 5 MB；图片保存在当前私有工作区的 assets/ 中。</small>
-          <label class="photo-path-field">
-            <span>资源路径（通常无需手动修改）</span>
-            <input type="text" data-path="basics.photo" value="${escapeHtml(value)}" placeholder="assets/profile.png" />
-          </label>
         </div>
       </div>
     </div>`;
@@ -171,7 +223,7 @@
   function renderEditor() {
     const config = state.config;
     elements.form.innerHTML = `
-      <details class="form-section" open>
+      <details class="form-section" data-section="template" open>
         <summary>简历模板</summary>
         <div class="section-content template-grid">
           ${state.templates.map((template) => `<button class="template-card ${config.template === template.id ? "selected" : ""}" type="button" data-action="select-template" data-template-id="${escapeHtml(template.id)}">
@@ -182,7 +234,7 @@
           </button>`).join("")}
         </div>
       </details>
-      <details class="form-section" open>
+      <details class="form-section" data-section="basics" open>
         <summary>基本信息</summary>
         <div class="section-content field-grid">
           ${field("姓名", "basics.name", config.basics.name)}
@@ -193,7 +245,7 @@
           ${field("页脚", "footer", config.footer, { wide: true })}
         </div>
       </details>
-      <details class="form-section" open>
+      <details class="form-section" data-section="education" open>
         <summary>教育经历</summary>
         <div class="section-content">
           ${config.education.map((item, index) => `<div class="item-card">
@@ -208,7 +260,7 @@
           <button class="add-button" type="button" data-action="add-education">＋ 添加教育经历</button>
         </div>
       </details>
-      <details class="form-section" open>
+      <details class="form-section" data-section="skills" open>
         <summary>核心技能</summary>
         <div class="section-content">
           ${config.skills.map((item, index) => `<div class="item-card">
@@ -221,7 +273,7 @@
           <button class="add-button" type="button" data-action="add-skill">＋ 添加技能分组</button>
         </div>
       </details>
-      <details class="form-section" open>
+      <details class="form-section" data-section="experience" open>
         <summary>工作与项目</summary>
         <div class="section-content">
           ${config.experiences.map((experience, experienceIndex) => `<div class="item-card experience-editor">
@@ -511,6 +563,7 @@
     });
     document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => {
       document.querySelectorAll(".tab").forEach((item) => item.classList.toggle("active", item === tab));
+      elements.tabs.dataset.activeTab = tab.dataset.tab;
       document.querySelectorAll(".tab-panel").forEach((panel) => {
         const active = panel.id === `${tab.dataset.tab}-panel`;
         panel.hidden = !active;
@@ -519,6 +572,9 @@
     }));
     elements.saveButton.addEventListener("click", () => saveConfig().catch(() => {}));
     elements.exportButton.addEventListener("click", () => elements.exportDialog.showModal());
+    elements.zoomOut.addEventListener("click", () => applyPreviewZoom(state.previewZoom - PREVIEW_ZOOM_STEP));
+    elements.zoomIn.addEventListener("click", () => applyPreviewZoom(state.previewZoom + PREVIEW_ZOOM_STEP));
+    elements.zoomFit.addEventListener("click", fitPreview);
     elements.confirmExport.addEventListener("click", exportCurrent);
     elements.commitButton.addEventListener("click", commitGit);
     elements.fetchButton.addEventListener("click", () => syncGit("fetch", "远程状态已刷新"));
@@ -542,7 +598,20 @@
       clearDraft();
       elements.draftBanner.hidden = true;
     });
-    elements.frame.addEventListener("load", postPreview);
+    elements.frame.addEventListener("load", () => {
+      postPreview();
+      requestAnimationFrame(fitPreview);
+    });
+    if (window.ResizeObserver) {
+      const previewObserver = new ResizeObserver(() => {
+        if (state.previewFit) fitPreview();
+      });
+      previewObserver.observe(elements.previewStage);
+    } else {
+      window.addEventListener("resize", () => {
+        if (state.previewFit) fitPreview();
+      });
+    }
     window.addEventListener("message", (event) => {
       if (event.origin !== window.location.origin || event.data?.type !== "resume:layout") return;
       state.overflow = event.data.overflow;

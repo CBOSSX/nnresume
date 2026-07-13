@@ -4,7 +4,8 @@ const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
 const { execFileSync } = require("node:child_process");
-const { createGitHubRepository, initCommand, parseArguments } = require("../lib/cli");
+const { createGitHubRepository, initCommand, parseArguments, resolveWorkspace } = require("../lib/cli");
+const { clearDefaultWorkspace, readDefaultWorkspace, setDefaultWorkspace } = require("../lib/settings");
 
 const appRoot = path.join(__dirname, "..");
 
@@ -29,6 +30,35 @@ test("init creates a valid independent Git workspace", async () => {
   assert.equal(execFileSync("git", ["branch", "--show-current"], { cwd: target, encoding: "utf8" }).trim(), "main");
   assert.equal(execFileSync("git", ["status", "--porcelain"], { cwd: target, encoding: "utf8" }).trim(), "");
   await assert.rejects(() => initCommand(appRoot, [target, "--no-remote"]), /目标目录必须为空/);
+});
+
+test("init can persist the new workspace as the default", async () => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), "nnresume-default-init-"));
+  const target = path.join(parent, "my-resume");
+  const configPath = path.join(parent, "config", "config.json");
+  await initCommand(appRoot, [target, "--no-remote", "--default"], { configPath });
+  assert.equal(readDefaultWorkspace({ configPath }), target);
+});
+
+test("workspace resolution uses current workspace before the configured default", () => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), "nnresume-resolve-"));
+  const current = path.join(parent, "current");
+  const fallback = path.join(parent, "fallback");
+  const outside = path.join(parent, "outside");
+  const configPath = path.join(parent, "config.json");
+  fs.cpSync(path.join(appRoot, "starter"), current, { recursive: true });
+  fs.cpSync(path.join(appRoot, "starter"), fallback, { recursive: true });
+  fs.mkdirSync(outside);
+  setDefaultWorkspace(fallback, { configPath });
+
+  assert.equal(resolveWorkspace(null, { cwd: current, configPath }), current);
+  assert.equal(resolveWorkspace(null, { cwd: outside, configPath }), fallback);
+  assert.equal(resolveWorkspace(fallback, { cwd: current, configPath }), fallback);
+  assert.equal(clearDefaultWorkspace({ configPath }), fallback);
+  assert.equal(readDefaultWorkspace({ configPath }), null);
+  assert.throws(() => resolveWorkspace(null, { cwd: outside, configPath }), /设置默认工作区/);
+  setDefaultWorkspace(path.join(parent, "missing"), { configPath });
+  assert.throws(() => resolveWorkspace(null, { cwd: outside, configPath }), /默认工作区已失效/);
 });
 
 test("GitHub creation normalizes SSH remotes to repository-local HTTPS credentials", async () => {
