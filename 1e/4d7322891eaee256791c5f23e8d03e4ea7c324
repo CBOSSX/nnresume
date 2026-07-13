@@ -1,0 +1,23 @@
+package-lock.json
+  s_7cf075d1060675::t_c593f4f6e0d192 3,9
+package.json
+  s_7cf075d1060675::t_d8926264c9cf17 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "1e4d7322891eaee256791c5f23e8d03e4ea7c324",
+  "prompts": {},
+  "sessions": {
+    "s_7cf075d1060675": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5a67-8d63-7c03-ad74-45d3e56b0338",
+        "model": "unknown"
+      },
+      "human_author": "CBOSSX <89856974+CBOSSX@users.noreply.github.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
