@@ -1,0 +1,43 @@
+README.md
+  s_8fa44b07cae74e::t_7faf1048470e2c 50
+editor.css
+  s_8fa44b07cae74e::t_c0a5535831ee66 166-176,252
+editor.js
+  s_8fa44b07cae74e::t_408c56a5f8dbd9 31,107-111,138-162,192,284,289-317,505-507
+index.html
+  s_8fa44b07cae74e::t_45091aa66156a2 91
+lib/assets.js
+  s_8fa44b07cae74e::t_1a9dbb29bd8b73 1-38
+preview.html
+  s_8fa44b07cae74e::t_0bcbda8d561658 9-19
+resume-renderer.js
+  s_8fa44b07cae74e::t_bb64ca6da10357 8-11
+scripts/e2e.js
+  s_8fa44b07cae74e::t_57238aef758389 10,43-54,93
+server.js
+  s_8fa44b07cae74e::t_6dbfc563aef592 4,20-21,26,28,81-105,131-135,222
+starter/README.md
+  s_8fa44b07cae74e::t_c026f2772de010 3-9,12-13,15-26,30-31,35-38
+test/cli.test.js
+  s_8fa44b07cae74e::t_5e6cecf20e920e 25-28
+test/server.test.js
+  s_8fa44b07cae74e::t_40a01fc0e06169 53-84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "bc0763e38eb59725f550494b9c43d902e6b3ac34",
+  "prompts": {},
+  "sessions": {
+    "s_8fa44b07cae74e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5a02-968a-7802-a963-3f7660036803",
+        "model": "unknown"
+      },
+      "human_author": "CaoBochun <caobochun@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
