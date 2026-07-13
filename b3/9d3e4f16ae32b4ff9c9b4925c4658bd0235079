@@ -1,0 +1,23 @@
+package-lock.json
+  s_8fa44b07cae74e::t_a6193eb35a5c64 3,9
+package.json
+  s_8fa44b07cae74e::t_7db4829022e035 3,25-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "b39d3e4f16ae32b4ff9c9b4925c4658bd0235079",
+  "prompts": {},
+  "sessions": {
+    "s_8fa44b07cae74e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5a02-968a-7802-a963-3f7660036803",
+        "model": "unknown"
+      },
+      "human_author": "CaoBochun <caobochun@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
