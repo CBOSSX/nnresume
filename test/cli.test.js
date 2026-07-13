@@ -1,19 +1,93 @@
 const assert = require("node:assert/strict");
+const { once } = require("node:events");
 const fs = require("node:fs");
+const net = require("node:net");
 const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
 const { execFileSync } = require("node:child_process");
-const { createGitHubRepository, initCommand, parseArguments, resolveWorkspace } = require("../lib/cli");
+const {
+  buildBackgroundArguments,
+  createGitHubRepository,
+  initCommand,
+  parseArguments,
+  resolveWorkspace,
+  startCommand,
+} = require("../lib/cli");
 const { clearDefaultWorkspace, readDefaultWorkspace, setDefaultWorkspace } = require("../lib/settings");
 
 const appRoot = path.join(__dirname, "..");
+
+async function getAvailablePort() {
+  const server = net.createServer();
+  await new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
+  const port = server.address().port;
+  await new Promise((resolve) => server.close(resolve));
+  return port;
+}
 
 test("argument parser supports inline and separated flags", () => {
   assert.deepEqual(parseArguments(["workspace", "--port=5000", "--no-open", "--label", "v2"]), {
     values: ["workspace"],
     flags: { port: "5000", "no-open": true, label: "v2" },
   });
+});
+
+test("background arguments use the resolved workspace without forwarding background flags", () => {
+  const workspaceRoot = path.join(os.tmpdir(), "resolved-workspace");
+  const args = buildBackgroundArguments(appRoot, workspaceRoot, { background: "true", "no-open": true }, 4567);
+  assert.deepEqual(args, [
+    path.join(appRoot, "bin", "nnresume.js"),
+    "start",
+    workspaceRoot,
+    "--port=4567",
+    "--no-open",
+  ]);
+  assert.equal(args.some((value) => value.startsWith("--background")), false);
+});
+
+test("background start resolves a relative workspace and waits until the server is ready", async () => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), "nnresume-background-"));
+  const workspaceRoot = path.join(parent, "workspace");
+  fs.cpSync(path.join(appRoot, "starter"), workspaceRoot, { recursive: true });
+  const relativeWorkspace = path.relative(process.cwd(), workspaceRoot);
+  const port = await getAvailablePort();
+  let child;
+  try {
+    child = await startCommand(appRoot, [relativeWorkspace, "--background", "--no-open", `--port=${port}`]);
+    const response = await fetch(`http://127.0.0.1:${port}/api/config`);
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get("x-nnresume-workspace"), /^[a-f0-9]{16}$/);
+  } finally {
+    if (child?.pid) {
+      const exited = once(child, "exit");
+      child.kill("SIGTERM");
+      await Promise.race([exited, new Promise((resolve) => setTimeout(resolve, 2000))]);
+    }
+  }
+});
+
+test("background start reports a port conflict instead of claiming success", async () => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), "nnresume-background-conflict-"));
+  const workspaceRoot = path.join(parent, "workspace");
+  fs.cpSync(path.join(appRoot, "starter"), workspaceRoot, { recursive: true });
+  const blocker = net.createServer();
+  await new Promise((resolve, reject) => {
+    blocker.once("error", reject);
+    blocker.listen(0, "127.0.0.1", resolve);
+  });
+  const port = blocker.address().port;
+  try {
+    await assert.rejects(
+      () => startCommand(appRoot, [workspaceRoot, "--background", "--no-open", `--port=${port}`]),
+      /EADDRINUSE|后台启动失败/,
+    );
+  } finally {
+    await new Promise((resolve) => blocker.close(resolve));
+  }
 });
 
 test("init creates a valid independent Git workspace", async () => {

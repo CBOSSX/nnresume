@@ -1,7 +1,8 @@
 (function resumeEditor() {
   "use strict";
 
-  const DRAFT_KEY = "nnresume-draft-v1";
+  const DRAFT_PREFIX = "nnresume-draft-v2";
+  const PREVIOUS_DRAFT_KEY = "nnresume-draft-v1";
   const LEGACY_DRAFT_KEY = "resume-manager-draft-v1";
   const THEME_KEY = "nnresume-theme-v1";
   const themeQuery = window.matchMedia("(prefers-color-scheme: dark)");
@@ -50,12 +51,15 @@
     previewZoom: 1,
     previewFit: true,
     theme: "system",
+    workspaceId: "unknown",
+    revision: null,
   };
   const MIN_PREVIEW_ZOOM = 0.35;
   const MAX_PREVIEW_ZOOM = 1.2;
   const PREVIEW_ZOOM_STEP = 0.1;
   let previewTimer;
   let toastTimer;
+  let pendingDraft = null;
 
   const escapeHtml = (value) => String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -64,19 +68,40 @@
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
   const clone = (value) => JSON.parse(JSON.stringify(value));
-  const readDraft = () => {
-    const current = localStorage.getItem(DRAFT_KEY);
-    if (current) return JSON.parse(current);
-    const legacy = localStorage.getItem(LEGACY_DRAFT_KEY);
-    if (!legacy) return null;
-    localStorage.setItem(DRAFT_KEY, legacy);
-    localStorage.removeItem(LEGACY_DRAFT_KEY);
-    return JSON.parse(legacy);
+  const draftKey = () => `${DRAFT_PREFIX}:${state.workspaceId}:${state.revision || "unloaded"}`;
+  const readDraftEntry = (key) => {
+    const stored = localStorage.getItem(key);
+    if (!stored) return null;
+    try {
+      return { key, draft: JSON.parse(stored) };
+    } catch (_) {
+      localStorage.removeItem(key);
+      return null;
+    }
   };
-  const clearDraft = () => {
-    localStorage.removeItem(DRAFT_KEY);
-    localStorage.removeItem(LEGACY_DRAFT_KEY);
+  const findDraft = (config) => {
+    const current = readDraftEntry(draftKey());
+    if (current?.draft?.config && canonical(current.draft.config) !== canonical(config)) return current;
+    if (current) clearDraft(current.key);
+    const workspacePrefix = `${DRAFT_PREFIX}:${state.workspaceId}:`;
+    const candidates = [];
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (!key?.startsWith(workspacePrefix)) continue;
+      const entry = readDraftEntry(key);
+      if (entry?.draft?.config) candidates.push(entry);
+    }
+    [readDraftEntry(PREVIOUS_DRAFT_KEY), readDraftEntry(LEGACY_DRAFT_KEY)]
+      .filter((entry) => entry?.draft?.config)
+      .forEach((entry) => candidates.push(entry));
+    candidates.sort((left, right) => Number(right.draft.savedAt || 0) - Number(left.draft.savedAt || 0));
+    const recoverable = candidates.find((entry) => canonical(entry.draft.config) !== canonical(config));
+    candidates.filter((entry) => entry !== recoverable).forEach((entry) => {
+      if (canonical(entry.draft.config) === canonical(config)) clearDraft(entry.key);
+    });
+    return recoverable || null;
   };
+  const clearDraft = (key = draftKey()) => localStorage.removeItem(key);
   const readTheme = () => {
     try {
       const theme = localStorage.getItem(THEME_KEY);
@@ -118,6 +143,15 @@
     return data;
   }
 
+  async function loadConfigFromDisk() {
+    const response = await fetch("/api/config", { headers: { "Content-Type": "application/json" } });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `请求失败：${response.status}`);
+    state.workspaceId = response.headers.get("X-Nnresume-Workspace") || state.workspaceId;
+    state.revision = response.headers.get("X-Nnresume-Revision") || state.revision;
+    return data;
+  }
+
   function showToast(message) {
     clearTimeout(toastTimer);
     elements.toast.textContent = message;
@@ -144,7 +178,7 @@
   }
 
   function saveDraft() {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify({ savedAt: Date.now(), config: state.config }));
+    localStorage.setItem(draftKey(), JSON.stringify({ savedAt: Date.now(), revision: state.revision, config: state.config }));
   }
 
   function postPreview() {
@@ -403,11 +437,13 @@
   async function saveConfig() {
     elements.validation.hidden = true;
     elements.saveButton.disabled = true;
+    const previousDraftKey = draftKey();
     try {
-      const saved = await api("/api/config", { method: "PUT", body: JSON.stringify(state.config) });
-      state.config = clone(saved);
-      state.saved = clone(saved);
-      clearDraft();
+      const saved = await api("/api/config", { method: "PUT", headers: state.revision ? { "If-Match": `"${state.revision}"` } : {}, body: JSON.stringify(state.config) });
+      const fresh = await loadConfigFromDisk();
+      state.config = clone(fresh);
+      state.saved = clone(fresh);
+      clearDraft(previousDraftKey);
       await loadGit();
       updateStatus();
       showToast("配置已保存");
@@ -443,10 +479,16 @@
 
   async function restoreExport(id) {
     if (!window.confirm(`恢复 ${id}？恢复前会自动备份当前配置。`)) return;
-    const result = await api(`/api/exports/${encodeURIComponent(id)}/restore`, { method: "POST", body: "{}" });
-    state.config = clone(result.config);
-    state.saved = clone(result.config);
-    clearDraft();
+    const previousDraftKey = draftKey();
+    const result = await api(`/api/exports/${encodeURIComponent(id)}/restore`, {
+      method: "POST",
+      headers: state.revision ? { "If-Match": `"${state.revision}"` } : {},
+      body: "{}",
+    });
+    const fresh = await loadConfigFromDisk();
+    state.config = clone(fresh);
+    state.saved = clone(fresh);
+    clearDraft(previousDraftKey);
     renderEditor();
     postPreview();
     await Promise.all([loadHistory(), loadGit()]);
@@ -499,7 +541,7 @@
       <div class="git-row"><span>工作区</span><strong>${git.dirty ? "有未提交变更" : "干净"}</strong></div>
       ${git.changes.length ? `<div class="git-changes">${escapeHtml(git.changes.join("\n"))}</div>` : ""}`;
     elements.fetchButton.disabled = !git.remote;
-    elements.pullButton.disabled = !git.remote || git.dirty;
+    elements.pullButton.disabled = !git.remote || git.dirty || state.dirty;
     elements.pushButton.disabled = !git.remote || git.behind > 0;
   }
 
@@ -526,9 +568,19 @@
   }
 
   async function syncGit(action, successMessage) {
+    if (action === "pull" && state.dirty) return showToast("请先保存或丢弃未保存修改，再拉取远程");
     [elements.fetchButton, elements.pullButton, elements.pushButton].forEach((button) => { button.disabled = true; });
     try {
       state.git = await api(`/api/git/${action}`, { method: "POST", body: "{}" });
+      if (action === "pull") {
+        const previousDraftKey = draftKey();
+        const fresh = await loadConfigFromDisk();
+        clearDraft(previousDraftKey);
+        state.config = clone(fresh);
+        state.saved = clone(fresh);
+        renderEditor();
+        postPreview();
+      }
       renderGit();
       updateStatus();
       showToast(successMessage);
@@ -544,9 +596,10 @@
     try {
       const manifest = await api("/api/exports", {
         method: "POST",
+        headers: state.revision ? { "If-Match": `"${state.revision}"` } : {},
         body: JSON.stringify({ config: state.config, label: elements.exportLabel.value }),
       });
-      const saved = await api("/api/config");
+      const saved = await loadConfigFromDisk();
       state.config = clone(saved);
       state.saved = clone(saved);
       clearDraft();
@@ -565,10 +618,10 @@
 
   function setupDraft(config) {
     try {
-      const draft = readDraft();
-      if (draft?.config && canonical(draft.config) !== canonical(config)) elements.draftBanner.hidden = false;
+      pendingDraft = findDraft(config);
+      if (pendingDraft) elements.draftBanner.hidden = false;
     } catch (_) {
-      clearDraft();
+      pendingDraft = null;
     }
   }
 
@@ -617,14 +670,18 @@
       if (button.dataset.historyAction === "restore") restoreExport(button.dataset.id).catch((error) => showToast(error.message));
     });
     document.getElementById("restore-draft").addEventListener("click", () => {
-      const draft = readDraft();
+      if (!pendingDraft?.draft?.config) return;
+      const { draft, key } = pendingDraft;
+      clearDraft(key);
+      pendingDraft = null;
       state.config = clone(draft.config);
       elements.draftBanner.hidden = true;
       renderEditor();
       markChanged();
     });
     document.getElementById("discard-draft").addEventListener("click", () => {
-      clearDraft();
+      if (pendingDraft) clearDraft(pendingDraft.key);
+      pendingDraft = null;
       elements.draftBanner.hidden = true;
     });
     elements.frame.addEventListener("load", () => {
@@ -669,7 +726,7 @@
     applyTheme(readTheme());
     setupEvents();
     try {
-      const [config, templates] = await Promise.all([api("/api/config"), api("/api/templates")]);
+      const [config, templates] = await Promise.all([loadConfigFromDisk(), api("/api/templates")]);
       state.config = clone(config);
       state.saved = clone(config);
       state.templates = templates;
