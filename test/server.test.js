@@ -50,3 +50,35 @@ test("server exposes templates and rejects an unknown template", async (context)
   });
   assert.equal(response.status, 400);
 });
+
+test("server imports a validated profile photo into controlled assets", async (context) => {
+  const workspaceRoot = createWorkspace();
+  const server = createServer({ appRoot, workspaceRoot });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  context.after(() => server.close());
+  const port = server.address().port;
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64");
+  const response = await fetch(`http://127.0.0.1:${port}/api/assets/photo`, {
+    method: "PUT",
+    headers: { "Content-Type": "image/png" },
+    body: png,
+  });
+  assert.equal(response.status, 201);
+  assert.deepEqual(await response.json(), { path: "assets/profile.png" });
+  assert.deepEqual(fs.readFileSync(path.join(workspaceRoot, "assets", "profile.png")), png);
+
+  const assetResponse = await fetch(`http://127.0.0.1:${port}/assets/profile.png`);
+  assert.equal(assetResponse.headers.get("content-type"), "image/png");
+  const invalid = await fetch(`http://127.0.0.1:${port}/api/assets/photo`, {
+    method: "PUT",
+    headers: { "Content-Type": "image/png" },
+    body: Buffer.from("not really a png"),
+  });
+  assert.equal(invalid.status, 400);
+  const oversized = await fetch(`http://127.0.0.1:${port}/api/assets/photo`, {
+    method: "PUT",
+    headers: { "Content-Type": "image/png" },
+    body: Buffer.alloc(5 * 1024 * 1024 + 1),
+  });
+  assert.equal(oversized.status, 413);
+});

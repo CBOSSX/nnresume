@@ -28,7 +28,7 @@
     diffContent: document.getElementById("diff-content"),
     toast: document.getElementById("toast"),
   };
-  const state = { config: null, saved: null, templates: [], history: [], git: null, dirty: false, overflow: false };
+  const state = { config: null, saved: null, templates: [], history: [], git: null, dirty: false, overflow: false, assetVersion: 0 };
   let previewTimer;
   let toastTimer;
 
@@ -104,7 +104,11 @@
   function postPreview() {
     clearTimeout(previewTimer);
     previewTimer = setTimeout(() => {
-      elements.frame.contentWindow?.postMessage({ type: "resume:preview", config: state.config }, window.location.origin);
+      const config = clone(state.config);
+      if (state.assetVersion && /^assets\//.test(config.basics.photo)) {
+        config.basics.photo = `${config.basics.photo}?v=${state.assetVersion}`;
+      }
+      elements.frame.contentWindow?.postMessage({ type: "resume:preview", config }, window.location.origin);
     }, 80);
   }
 
@@ -129,6 +133,31 @@
     const content = options.textarea ? escapeHtml(value) : "";
     const valueAttribute = options.textarea ? "" : ` value="${escapeHtml(value)}"`;
     return `<label class="field ${options.wide ? "wide" : ""}"><span>${escapeHtml(label)}</span><${tag}${attributes} data-path="${escapeHtml(path)}"${valueAttribute}>${content}</${tag}></label>`;
+  }
+
+  function photoField(value) {
+    const photo = String(value || "").trim();
+    const previewUrl = photo && state.assetVersion ? `${photo}?v=${state.assetVersion}` : photo;
+    return `<div class="field wide photo-field">
+      <span>个人照片</span>
+      <div class="photo-upload-row">
+        ${photo ? `<img class="photo-upload-preview" src="${escapeHtml(previewUrl)}" alt="当前个人照片" />` : '<div class="photo-upload-preview photo-upload-placeholder">暂无照片</div>'}
+        <div class="photo-upload-controls">
+          <div class="photo-upload-actions">
+            <label class="photo-picker">
+              <span class="button secondary compact">选择并导入图片</span>
+              <input type="file" accept="image/png,image/jpeg,image/webp" data-photo-upload aria-label="选择并导入个人照片" />
+            </label>
+            ${photo ? '<button class="button ghost compact" type="button" data-action="remove-photo">从简历移除</button>' : ""}
+          </div>
+          <small>支持 PNG、JPEG、WebP，最大 5 MB；图片保存在当前私有工作区的 assets/ 中。</small>
+          <label class="photo-path-field">
+            <span>资源路径（通常无需手动修改）</span>
+            <input type="text" data-path="basics.photo" value="${escapeHtml(value)}" placeholder="assets/profile.png" />
+          </label>
+        </div>
+      </div>
+    </div>`;
   }
 
   function itemActions(type, index, length, extra = "") {
@@ -160,7 +189,7 @@
           ${field("手机号", "basics.phone", config.basics.phone)}
           ${field("目标岗位", "basics.title", config.basics.title, { wide: true })}
           ${field("邮箱", "basics.email", config.basics.email, { type: "email", wide: true })}
-          ${field("照片路径（留空则不显示）", "basics.photo", config.basics.photo || "", { wide: true })}
+          ${photoField(config.basics.photo || "")}
           ${field("页脚", "footer", config.footer, { wide: true })}
         </div>
       </details>
@@ -252,8 +281,38 @@
     if (action === "add-bullet") state.config.experiences[experienceIndex].projects[projectIndex].bullets.push("新的项目要点");
     if (action === "remove-bullet") state.config.experiences[experienceIndex].projects[projectIndex].bullets.splice(index, 1);
     if (action === "move-bullet") move(state.config.experiences[experienceIndex].projects[projectIndex].bullets, index, direction);
+    if (action === "remove-photo") state.config.basics.photo = "";
     renderEditor();
     markChanged();
+  }
+
+  async function uploadPhoto(input) {
+    const [file] = input.files || [];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      input.value = "";
+      showToast("图片不能超过 5 MB");
+      return;
+    }
+    input.disabled = true;
+    try {
+      const response = await fetch("/api/assets/photo", {
+        method: "PUT",
+        headers: { "Content-Type": file.type || "application/octet-stream" },
+        body: file,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || `图片导入失败：${response.status}`);
+      state.config.basics.photo = data.path;
+      state.assetVersion = Date.now();
+      renderEditor();
+      markChanged();
+      showToast("照片已导入，请保存配置");
+    } catch (error) {
+      input.disabled = false;
+      input.value = "";
+      showToast(error.message);
+    }
   }
 
   function showValidation(error) {
@@ -442,6 +501,9 @@
       if (!path) return;
       setByPath(state.config, path, event.target.value);
       markChanged();
+    });
+    elements.form.addEventListener("change", (event) => {
+      if (event.target.matches("[data-photo-upload]")) uploadPhoto(event.target);
     });
     elements.form.addEventListener("click", (event) => {
       const button = event.target.closest("[data-action]");

@@ -5,6 +5,10 @@
   const loadedScripts = new Map();
   let templates;
 
+  if (new URLSearchParams(window.location.search).get("embedded") === "1") {
+    document.documentElement.classList.add("embedded-preview");
+  }
+
   function reportLayout() {
     requestAnimationFrame(() => {
       const page = document.querySelector(".page");

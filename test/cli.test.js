@@ -22,6 +22,10 @@ test("init creates a valid independent Git workspace", async () => {
   assert.equal(JSON.parse(fs.readFileSync(path.join(target, "resume.json"))).schemaVersion, 3);
   assert.equal(fs.existsSync(path.join(target, ".gitignore")), true);
   assert.equal(fs.existsSync(path.join(target, "gitignore")), false);
+  const readme = fs.readFileSync(path.join(target, "README.md"), "utf8");
+  assert.match(readme, /https:\/\/github\.com\/CBOSSX\/nnresume/);
+  assert.match(readme, /npx nnresume/);
+  assert.match(readme, /选择并导入/);
   assert.equal(execFileSync("git", ["branch", "--show-current"], { cwd: target, encoding: "utf8" }).trim(), "main");
   assert.equal(execFileSync("git", ["status", "--porcelain"], { cwd: target, encoding: "utf8" }).trim(), "");
   await assert.rejects(() => initCommand(appRoot, [target, "--no-remote"]), /目标目录必须为空/);

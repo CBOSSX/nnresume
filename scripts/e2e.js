@@ -7,6 +7,7 @@ const { createServer } = require("../server");
 const appRoot = path.join(__dirname, "..");
 const workspaceRoot = path.join(appRoot, "examples", "demo");
 const screenshotPath = process.env.SCREENSHOT_PATH || path.join(appRoot, "nnresume-editor.png");
+const uploadedPhotoPath = path.join(workspaceRoot, "assets", "profile.png");
 
 async function startLocalServer() {
   if (process.env.NNRESUME_URL || process.env.RESUME_MANAGER_URL) {
@@ -39,6 +40,18 @@ async function startLocalServer() {
     await page.goto(baseUrl, { waitUntil: "networkidle" });
     await page.locator('[data-path="basics.name"]').waitFor();
     await page.frameLocator("#preview-frame").getByText("示例大学").waitFor();
+    assert.equal(await page.locator("#preview-frame").getAttribute("src"), "preview.html?embedded=1");
+    const previewFrame = page.frames().find((frame) => frame.url().includes("preview.html?embedded=1"));
+    assert.ok(previewFrame);
+    assert.deepEqual(await previewFrame.evaluate(() => ({
+      hasInternalScroll: document.documentElement.scrollHeight > document.documentElement.clientHeight,
+      pageShadow: getComputedStyle(document.querySelector(".page")).boxShadow,
+    })), { hasInternalScroll: false, pageShadow: "none" });
+
+    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64");
+    await page.locator("[data-photo-upload]").setInputFiles({ name: "avatar.png", mimeType: "image/png", buffer: png });
+    await page.waitForFunction(() => document.querySelector('[data-path="basics.photo"]')?.value === "assets/profile.png");
+    await page.frameLocator("#preview-frame").locator(".profile-photo").waitFor();
 
     await page.getByRole("button", { name: /现代双栏/ }).click();
     await page.frameLocator("#preview-frame").locator(".modern-page").waitFor();
@@ -77,6 +90,7 @@ async function startLocalServer() {
     await page.screenshot({ path: screenshotPath, fullPage: true });
   } finally {
     await putConfig(original).catch(() => {});
+    fs.rmSync(uploadedPhotoPath, { force: true });
     await browser.close();
     if (server) await new Promise((resolve) => server.close(resolve));
   }

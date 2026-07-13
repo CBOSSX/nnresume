@@ -6,6 +6,17 @@
     <meta name="description" content="nnresume 简历预览" />
     <title>nnresume｜简历预览</title>
     <link id="template-style" rel="stylesheet" href="" />
+    <style>
+      html.embedded-preview,
+      html.embedded-preview body {
+        width: 210mm;
+        height: 297mm;
+        overflow: hidden;
+        background: #fff;
+      }
+      html.embedded-preview .resume { margin-bottom: 0; }
+      html.embedded-preview .page { box-shadow: none; }
+    </style>
     <script src="resume-renderer.js" defer></script>
   </head>
   <body class="preview-body">

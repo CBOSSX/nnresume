@@ -1,6 +1,7 @@
 const fs = require("fs");
 const http = require("http");
 const path = require("path");
+const { storeProfilePhoto } = require("./lib/assets");
 const { readConfig, validateConfig, writeConfigAtomic } = require("./lib/config");
 const { commitChanges, fetchRemote, getGitStatus, pullRemote, pushRemote } = require("./lib/git");
 const { listTemplates, readTemplate } = require("./lib/templates");
@@ -16,11 +17,15 @@ const {
 const MIME_TYPES = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
+  ".jpeg": "image/jpeg",
+  ".jpg": "image/jpeg",
   ".js": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
   ".pdf": "application/pdf",
   ".png": "image/png",
+  ".webp": "image/webp",
 };
+const MAX_ASSET_BYTES = 5 * 1024 * 1024;
 const STATIC_FILES = new Set([
   "index.html",
   "editor.css",
@@ -73,6 +78,31 @@ function readJsonBody(request) {
   });
 }
 
+function readBinaryBody(request, limit = MAX_ASSET_BYTES) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    let tooLarge = false;
+    request.on("data", (chunk) => {
+      size += chunk.length;
+      if (size > limit) {
+        tooLarge = true;
+        chunks.length = 0;
+      } else if (!tooLarge) chunks.push(chunk);
+    });
+    request.on("end", () => {
+      if (tooLarge) {
+        const error = new Error("图片不能超过 5 MB");
+        error.statusCode = 413;
+        reject(error);
+        return;
+      }
+      resolve(Buffer.concat(chunks));
+    });
+    request.on("error", reject);
+  });
+}
+
 function createServer(options = {}) {
   const appRoot = options.appRoot || __dirname;
   const workspaceRoot = options.workspaceRoot || options.root || __dirname;
@@ -97,6 +127,11 @@ function createServer(options = {}) {
         if (!validation.valid) return sendJson(response, 400, { error: "配置校验失败", errors: validation.errors });
         validateTemplate(body);
         return sendJson(response, 200, writeConfigAtomic(workspaceRoot, body));
+      }
+      if (request.method === "PUT" && pathname === "/api/assets/photo") {
+        const body = await readBinaryBody(request);
+        if (!body.length) return sendJson(response, 400, { error: "请选择要导入的图片" });
+        return sendJson(response, 201, storeProfilePhoto(workspaceRoot, body, request.headers["content-type"]));
       }
       if (request.method === "POST" && pathname === "/api/exports") {
         const body = await readJsonBody(request);
@@ -184,4 +219,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { createServer, readJsonBody };
+module.exports = { createServer, readBinaryBody, readJsonBody };
