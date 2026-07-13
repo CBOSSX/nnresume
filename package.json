@@ -1,6 +1,6 @@
 {
   "name": "nnresume",
-  "version": "3.0.1",
+  "version": "3.1.0",
   "description": "Local-first resume editor with Git sync and switchable templates",
   "license": "MIT",
   "bin": {
