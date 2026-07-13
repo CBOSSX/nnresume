@@ -1,6 +1,6 @@
 {
   "name": "nnresume",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Local-first resume editor with Git sync and switchable templates",
   "license": "MIT",
   "bin": {
@@ -22,7 +22,13 @@
     "README.md",
     "LICENSE"
   ],
-  "keywords": ["resume", "cv", "git", "pdf", "cli"],
+  "keywords": [
+    "resume",
+    "cv",
+    "git",
+    "pdf",
+    "cli"
+  ],
   "scripts": {
     "dev": "node bin/nnresume.js start examples/demo --no-open",
     "export": "node bin/nnresume.js export examples/demo",
