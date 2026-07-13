@@ -1,0 +1,29 @@
+lib/cli.js
+  s_7cf075d1060675::t_06b42e9ee1e49b 9,90-105,124,127-128,139,141,166,168,175,187-194,196,207-226,229,234,238-242,248,252
+lib/settings.js
+  s_7cf075d1060675::t_f14334404e4c66 1-83
+starter/README.md
+  s_7cf075d1060675::t_5b079e42d8c6f2 17-24
+test/cli.test.js
+  s_7cf075d1060675::t_442d9ebf67d88e 7-8,35-63
+test/settings.test.js
+  s_7cf075d1060675::t_66da1c38d56417 1-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a9d6af4976a9815ded62992a2c81fef8117d3e73",
+  "prompts": {},
+  "sessions": {
+    "s_7cf075d1060675": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5a67-8d63-7c03-ad74-45d3e56b0338",
+        "model": "unknown"
+      },
+      "human_author": "CBOSSX <89856974+CBOSSX@users.noreply.github.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
