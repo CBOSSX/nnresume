@@ -1,0 +1,7 @@
+{
+  "id": "modern",
+  "name": "现代双栏",
+  "version": "1.0.0",
+  "description": "侧栏承载个人信息与技能，主栏突出工作和项目经历。",
+  "accent": "#5b3fd1"
+}

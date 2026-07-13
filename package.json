@@ -1,0 +1,44 @@
+{
+  "name": "nnresume",
+  "version": "3.0.0",
+  "description": "Local-first resume editor with Git sync and switchable templates",
+  "license": "MIT",
+  "bin": {
+    "nnresume": "bin/nnresume.js"
+  },
+  "main": "server.js",
+  "files": [
+    "bin/",
+    "lib/",
+    "starter/",
+    "templates/",
+    "editor.css",
+    "editor.js",
+    "index.html",
+    "preview.html",
+    "resume-renderer.js",
+    "resume.schema.json",
+    "server.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": ["resume", "cv", "git", "pdf", "cli"],
+  "scripts": {
+    "dev": "node bin/nnresume.js start examples/demo --no-open",
+    "export": "node bin/nnresume.js export examples/demo",
+    "test": "node --test",
+    "test:e2e": "node scripts/e2e.js",
+    "check": "node scripts/check-js.js",
+    "pack:check": "node scripts/check-package.js",
+    "prepublishOnly": "npm run check && npm test && npm run pack:check"
+  },
+  "dependencies": {
+    "playwright": "^1.58.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

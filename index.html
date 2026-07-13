@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="本地简历编辑、预览、导出与版本管理工具" />
+    <title>nnresume</title>
+    <link rel="stylesheet" href="editor.css" />
+    <script src="editor.js" defer></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-mark">N</span>
+        <div>
+          <h1>nnresume</h1>
+          <p>配置驱动的简历工作台</p>
+        </div>
+      </div>
+      <div class="header-status" aria-live="polite">
+        <span id="save-status" class="status-chip neutral">正在载入</span>
+        <span id="layout-status" class="status-chip neutral">A4 检查中</span>
+        <span id="git-status-chip" class="status-chip neutral">Git 检查中</span>
+      </div>
+      <div class="header-actions">
+        <button id="save-button" class="button secondary" type="button">保存配置</button>
+        <button id="export-button" class="button primary" type="button">导出版本</button>
+      </div>
+    </header>
+
+    <div id="draft-banner" class="draft-banner" hidden>
+      <span>发现比磁盘配置更新的本地草稿。</span>
+      <div>
+        <button id="restore-draft" class="text-button" type="button">恢复草稿</button>
+        <button id="discard-draft" class="text-button muted" type="button">丢弃</button>
+      </div>
+    </div>
+
+    <main class="workspace">
+      <section class="control-panel" aria-label="简历管理面板">
+        <nav class="tabs" aria-label="功能切换">
+          <button class="tab active" type="button" data-tab="edit">编辑</button>
+          <button class="tab" type="button" data-tab="history">导出历史</button>
+          <button class="tab" type="button" data-tab="git">Git</button>
+        </nav>
+
+        <div id="validation-errors" class="validation-errors" hidden></div>
+        <section id="edit-panel" class="tab-panel active">
+          <form id="editor-form" autocomplete="off"></form>
+        </section>
+        <section id="history-panel" class="tab-panel" hidden>
+          <div class="panel-heading">
+            <div>
+              <h2>导出历史</h2>
+              <p>每个版本都保留配置快照和可追溯信息。</p>
+            </div>
+            <button id="refresh-history" class="button ghost compact" type="button">刷新</button>
+          </div>
+          <div id="history-list" class="history-list"></div>
+        </section>
+        <section id="git-panel" class="tab-panel" hidden>
+          <div class="panel-heading">
+            <div>
+              <h2>Git 版本</h2>
+              <p>保存配置后，再创建一个可回退的源码版本。</p>
+            </div>
+          </div>
+          <div id="git-details" class="git-details"></div>
+          <label class="field">
+            <span>提交说明</span>
+            <input id="commit-message" maxlength="200" placeholder="例如：docs: refine AI project bullets" />
+          </label>
+          <button id="commit-button" class="button primary full" type="button">创建 Git 版本</button>
+          <div class="git-sync-actions">
+            <button id="fetch-button" class="button ghost" type="button">刷新远程</button>
+            <button id="pull-button" class="button ghost" type="button">拉取</button>
+            <button id="push-button" class="button secondary" type="button">推送</button>
+          </div>
+        </section>
+      </section>
+
+      <section class="preview-panel" aria-label="实时 A4 预览">
+        <div class="preview-toolbar">
+          <div>
+            <strong>实时预览</strong>
+            <span>保存前也会随表单更新</span>
+          </div>
+          <a class="button ghost compact" href="preview.html" target="_blank">单独打开</a>
+        </div>
+        <div class="preview-stage">
+          <iframe id="preview-frame" title="简历 A4 实时预览" src="preview.html"></iframe>
+        </div>
+      </section>
+    </main>
+
+    <dialog id="export-dialog" class="dialog">
+      <form method="dialog">
+        <div class="dialog-heading">
+          <div>
+            <h2>导出新版本</h2>
+            <p>将生成唯一目录，并保存本次配置快照。</p>
+          </div>
+          <button class="icon-button" value="cancel" aria-label="关闭">×</button>
+        </div>
+        <label class="field">
+          <span>版本标签</span>
+          <input id="export-label" maxlength="40" value="resume" placeholder="例如 backend-v2" />
+        </label>
+        <div class="dialog-actions">
+          <button class="button ghost" value="cancel">取消</button>
+          <button id="confirm-export" class="button primary" value="default" type="button">保存并导出</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="diff-dialog" class="dialog wide">
+      <form method="dialog">
+        <div class="dialog-heading">
+          <div>
+            <h2 id="diff-title">配置差异</h2>
+            <p>当前编辑内容与历史快照的字段级比较。</p>
+          </div>
+          <button class="icon-button" value="cancel" aria-label="关闭">×</button>
+        </div>
+        <div id="diff-content" class="diff-content"></div>
+        <div class="dialog-actions">
+          <button class="button primary" value="cancel">完成</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>

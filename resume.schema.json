@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nnresume.dev/schema/resume-v3.json",
+  "title": "Resume configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "template", "basics", "education", "skills", "experiences", "footer"],
+  "properties": {
+    "schemaVersion": { "const": 3 },
+    "template": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,39}$" },
+    "updatedAt": { "type": "string" },
+    "basics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "title", "phone", "email"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "phone": { "type": "string", "minLength": 7 },
+        "email": { "type": "string", "format": "email" },
+        "photo": { "type": "string" }
+      }
+    },
+    "education": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["school", "major", "degree", "date"],
+        "properties": {
+          "school": { "type": "string", "minLength": 1 },
+          "major": { "type": "string", "minLength": 1 },
+          "degree": { "type": "string", "minLength": 1 },
+          "date": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "skills": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["category", "items"],
+        "properties": {
+          "category": { "type": "string", "minLength": 1 },
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "experiences": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["company", "role", "date", "projects"],
+        "properties": {
+          "company": { "type": "string", "minLength": 1 },
+          "role": { "type": "string", "minLength": 1 },
+          "date": { "type": "string", "minLength": 1 },
+          "projects": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["name", "tag", "intro", "bullets"],
+              "properties": {
+                "name": { "type": "string", "minLength": 1 },
+                "tag": { "type": "string" },
+                "intro": { "type": "string", "minLength": 1 },
+                "bullets": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": { "type": "string", "minLength": 1 }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "footer": { "type": "string", "minLength": 1 }
+  }
+}

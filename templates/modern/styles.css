@@ -1,0 +1,90 @@
+:root {
+  --ink: #1f2230;
+  --muted: #6f7280;
+  --accent: #5b3fd1;
+  --accent-soft: #eeebff;
+  --sidebar: #f4f2fb;
+}
+* { box-sizing: border-box; }
+html {
+  color: var(--ink);
+  background: #e8e8ee;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 9.5pt;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+body { margin: 0; }
+.resume { width: 210mm; margin: 0 auto 28px; }
+.page {
+  position: relative;
+  width: 210mm;
+  height: 297mm;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 12px 38px rgba(31, 34, 48, 0.16);
+}
+.modern-page { display: grid; grid-template-columns: 55mm 1fr; }
+.modern-sidebar { padding: 14mm 8mm 13mm; color: #343145; background: var(--sidebar); }
+.profile-photo {
+  display: block;
+  width: 27mm;
+  height: 34mm;
+  margin: 0 auto 8mm;
+  object-fit: cover;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 4px 18px rgba(62, 45, 135, 0.18);
+}
+.modern-section-title {
+  margin: 5mm 0 2.5mm;
+  color: var(--accent);
+  font-size: 9.5pt;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+.modern-sidebar .modern-section-title { padding-bottom: 1.5mm; border-bottom: 1px solid #d8d2ef; }
+.modern-contact { display: grid; gap: 1.5mm; color: var(--muted); font-size: 8pt; overflow-wrap: anywhere; }
+.modern-skill + .modern-skill, .modern-education + .modern-education { margin-top: 3mm; }
+.modern-skill h3, .modern-education h3 { margin: 0 0 0.8mm; font-size: 8.5pt; }
+.modern-skill p, .modern-education p { margin: 0; color: var(--muted); font-size: 7.8pt; line-height: 1.5; }
+.modern-education span { display: block; margin-top: 0.8mm; color: #858292; font-size: 7.4pt; }
+.modern-main { min-width: 0; padding: 14mm 12mm 14mm 10mm; }
+.modern-hero { margin-bottom: 6mm; padding-bottom: 5mm; border-bottom: 3px solid var(--accent); }
+.modern-eyebrow { margin: 0 0 1mm; color: var(--accent); font-size: 7.5pt; font-weight: 750; letter-spacing: 0.3em; }
+.modern-hero h1 { margin: 0 0 1.5mm; font-size: 25pt; line-height: 1.1; letter-spacing: 0.05em; }
+.modern-role { margin: 0; color: var(--muted); font-size: 10pt; }
+.modern-main > .modern-section-title { margin-top: 0; }
+.modern-experience + .modern-experience { margin-top: 4mm; padding-top: 3.5mm; border-top: 1px solid #dedbe9; }
+.modern-company { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 2.5mm; }
+.modern-company h3 { margin: 0; font-size: 11pt; }
+.modern-company p { margin: 0.5mm 0 0; color: var(--accent); font-size: 8.3pt; font-weight: 650; }
+.modern-company > span { color: var(--muted); font-size: 8pt; white-space: nowrap; }
+.modern-project + .modern-project { margin-top: 3mm; }
+.modern-project-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.modern-project-heading h4 { margin: 0; font-size: 9.5pt; }
+.modern-project-heading span { padding: 1px 6px; color: var(--accent); background: var(--accent-soft); border-radius: 9px; font-size: 7pt; }
+.modern-project-intro { margin: 0.8mm 0 1mm; color: var(--muted); font-size: 8pt; }
+.modern-impact-list { margin: 0; padding-left: 4mm; }
+.modern-impact-list li { padding-left: 0.8mm; font-size: 8.2pt; line-height: 1.42; text-align: justify; }
+.modern-impact-list li + li { margin-top: 0.8mm; }
+.modern-impact-list li::marker { color: var(--accent); }
+strong { color: #4a35a3; font-weight: 750; }
+.page-footer {
+  position: absolute;
+  right: 12mm;
+  bottom: 5mm;
+  left: 65mm;
+  display: flex;
+  justify-content: space-between;
+  padding-top: 1mm;
+  color: #9693a2;
+  border-top: 1px solid #e5e3eb;
+  font-size: 7pt;
+}
+@page { size: A4; margin: 0; }
+@media print {
+  html, body { width: 210mm; margin: 0; background: #fff; }
+  .resume { margin: 0; }
+  .page { margin: 0; box-shadow: none; }
+}

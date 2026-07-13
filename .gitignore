@@ -1,0 +1,8 @@
+node_modules/
+*.log
+.DS_Store
+*.tmp-*
+*-editor.png
+
+exports/*
+!exports/README.md

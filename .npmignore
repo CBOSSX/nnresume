@@ -1,0 +1,8 @@
+assets/
+examples/
+exports/
+scripts/
+test/
+resume.json
+*.png
+*.pdf

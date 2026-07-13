@@ -1,0 +1,110 @@
+:root {
+  --ink: #18212f;
+  --muted: #5e6878;
+  --accent: #174f78;
+  --accent-soft: #eaf2f7;
+  --line: #cfd8e2;
+  --paper: #fff;
+  --canvas: #e9edf2;
+}
+
+* { box-sizing: border-box; }
+html {
+  color: var(--ink);
+  background: var(--canvas);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  font-size: 10pt;
+  line-height: 1.44;
+  -webkit-font-smoothing: antialiased;
+}
+body { margin: 0; }
+a { color: inherit; text-decoration: none; }
+.resume { width: 210mm; margin: 0 auto 28px; }
+.page {
+  position: relative;
+  width: 210mm;
+  height: 297mm;
+  padding: 11mm 15mm 10mm;
+  overflow: hidden;
+  background: var(--paper);
+  box-shadow: 0 10px 35px rgba(26, 38, 53, 0.14);
+}
+h1, h2, h3, p, ul, dl, dd { margin-top: 0; }
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 9mm;
+  padding: 0 1mm 4.2mm 0;
+  border-bottom: 2px solid var(--accent);
+}
+.hero h1 { margin-bottom: 1mm; font-size: 23pt; line-height: 1.12; letter-spacing: 0.08em; }
+.role { margin-bottom: 0; color: var(--accent); font-size: 10.8pt; font-weight: 650; }
+.profile-photo {
+  width: 17mm;
+  height: 22mm;
+  object-fit: cover;
+  object-position: center 24%;
+  border: 1px solid #cbd5df;
+  border-radius: 4px;
+}
+.contact { display: flex; margin: 2.8mm 0 0; padding: 0; list-style: none; color: var(--muted); font-size: 8.5pt; }
+.contact li + li { margin-left: 3.5mm; padding-left: 3.5mm; border-left: 1px solid #d1dae3; }
+.contact span { margin-right: 1.2mm; color: #708094; font-weight: 650; }
+.section { margin-top: 3.2mm; }
+.section > h2 {
+  margin-bottom: 1.8mm;
+  padding-bottom: 1.5mm;
+  color: var(--accent);
+  border-bottom: 1px solid var(--line);
+  font-size: 11.5pt;
+  letter-spacing: 0.08em;
+}
+.education > h2 { border-bottom: 0; }
+.education-line, .company-line, .project-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+.education-line { margin-top: 1.3mm; padding: 2.2mm 3mm; background: #f7f9fb; border-left: 2px solid #a8bfd0; }
+.education-details { display: flex; align-items: baseline; gap: 10px; }
+.education-details h3, .education-details p { margin: 0; }
+.education-line h3, .company-line h3 { margin-bottom: 0; font-size: 11.1pt; }
+.education-line p, .company-line p { margin: 1px 0 0; color: var(--muted); font-size: 9.1pt; }
+.education-date, .company-line > span { color: var(--muted); font-size: 8.8pt; white-space: nowrap; }
+.skill-list { margin-bottom: 0; padding: 2.2mm 3.5mm; background: var(--accent-soft); border-left: 3px solid var(--accent); }
+.skill-list > div { display: grid; grid-template-columns: 25mm 1fr; gap: 4px; }
+.skill-list > div + div { margin-top: 0.7mm; }
+.skill-list dt { color: var(--accent); font-size: 8.7pt; font-weight: 700; }
+.skill-list dd { margin-bottom: 0; color: #334252; font-size: 8.7pt; }
+.company-line { margin: 2mm 0 2.6mm; }
+.experience-entry + .experience-entry { margin-top: 4mm; padding-top: 3.5mm; border-top: 1.5px solid var(--accent); }
+.project + .project { margin-top: 3.2mm; padding-top: 2.8mm; border-top: 1px solid var(--line); }
+.project-title { align-items: center; margin-bottom: 0.8mm; }
+.project-title h3 { margin-bottom: 0; font-size: 10.4pt; }
+.project-title span { padding: 1px 7px; color: var(--accent); background: var(--accent-soft); border-radius: 10px; font-size: 7.8pt; }
+.project-intro { margin-bottom: 1.2mm; color: var(--muted); font-size: 8.5pt; }
+.impact-list { margin-bottom: 0; padding-left: 4.5mm; }
+.impact-list li { padding-left: 1mm; color: #2c3745; font-size: 8.65pt; line-height: 1.43; text-align: justify; }
+.impact-list li + li { margin-top: 0.9mm; }
+.impact-list li::marker { color: var(--accent); }
+strong { color: #183f5c; font-weight: 720; }
+.page-footer {
+  position: absolute;
+  right: 15mm;
+  bottom: 5mm;
+  left: 15mm;
+  display: flex;
+  justify-content: space-between;
+  padding-top: 1.2mm;
+  color: #8a94a2;
+  border-top: 1px solid #e2e7ec;
+  font-size: 7.7pt;
+}
+@page { size: A4; margin: 0; }
+@media print {
+  html, body { width: 210mm; margin: 0; background: #fff; }
+  .resume { margin: 0; }
+  .page { margin: 0; box-shadow: none; }
+}

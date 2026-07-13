@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 3,
+  "template": "classic",
+  "basics": {
+    "name": "张小明",
+    "title": "软件工程师",
+    "phone": "+86 138 0000 0000",
+    "email": "hello@example.com",
+    "photo": ""
+  },
+  "education": [
+    {
+      "school": "示例大学",
+      "major": "计算机科学与技术",
+      "degree": "本科",
+      "date": "2020.09 - 2024.06"
+    }
+  ],
+  "skills": [
+    {
+      "category": "工程能力",
+      "items": "JavaScript、Node.js、数据库、自动化测试"
+    }
+  ],
+  "experiences": [
+    {
+      "company": "示例科技",
+      "role": "软件工程师",
+      "date": "2024.07 - 至今",
+      "projects": [
+        {
+          "name": "示例项目",
+          "tag": "核心项目",
+          "intro": "用一句话说明项目背景、目标和你的职责。",
+          "bullets": [
+            "负责核心模块设计与实现，通过 **可量化指标** 说明实际结果。",
+            "完善测试、监控与故障处理流程，提升系统稳定性。"
+          ]
+        }
+      ]
+    }
+  ],
+  "footer": "张小明 · 软件工程师"
+}
