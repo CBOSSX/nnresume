@@ -203,13 +203,14 @@ function createServer(options = {}) {
       }
       const restoreMatch = pathname.match(/^\/api\/exports\/([^/]+)\/restore$/u);
       if (request.method === "POST" && restoreMatch) {
+        assertConfigRevision(workspaceRoot, request);
         const id = restoreMatch[1];
         const target = readExport(workspaceRoot, id);
         const current = readConfig(workspaceRoot);
         const backup = createBackupSnapshot({ root: workspaceRoot, config: current, label: `before-restore-${id}` });
         validateTemplate(target.config);
         const restored = writeConfigAtomic(workspaceRoot, target.config);
-        return sendJson(response, 200, { config: restored, backup });
+        return sendJson(response, 200, { config: restored, backup }, configHeaders(workspaceRoot));
       }
 
       const exportFileMatch = pathname.match(/^\/exports\/([^/]+)\/([^/]+)$/u);

@@ -150,6 +150,47 @@ async function startLocalServer() {
     await nameInput.fill(original.basics.name);
     await page.waitForFunction(() => document.getElementById("save-status")?.textContent === "配置已保存");
 
+    const titleInput = page.locator('[data-path="basics.title"]');
+    const previousDraft = structuredClone(original);
+    previousDraft.basics.title = `${original.basics.title} 旧草稿`;
+    await page.evaluate((draft) => {
+      localStorage.setItem("nnresume-draft-v1", JSON.stringify({ savedAt: Date.now(), config: draft }));
+    }, previousDraft);
+    await page.reload({ waitUntil: "networkidle" });
+    await page.locator("#draft-banner").waitFor({ state: "visible" });
+    await page.getByRole("button", { name: "恢复草稿" }).click();
+    assert.equal(await titleInput.inputValue(), previousDraft.basics.title);
+    assert.equal(await page.evaluate(() => localStorage.getItem("nnresume-draft-v1")), null);
+
+    await page.evaluate(() => {
+      Object.keys(localStorage).filter((key) => key.startsWith("nnresume-draft")).forEach((key) => localStorage.removeItem(key));
+      localStorage.removeItem("resume-manager-draft-v1");
+    });
+    await putConfig(original);
+    await page.reload({ waitUntil: "networkidle" });
+    await titleInput.waitFor();
+
+    const staleDraftTitle = `${original.basics.title} 陈旧草稿`;
+    await titleInput.fill(staleDraftTitle);
+    await page.waitForFunction(() => document.getElementById("save-status")?.textContent === "有未保存修改");
+    const external = structuredClone(original);
+    external.footer = `${original.footer} · 外部更新`;
+    await putConfig(external);
+    await page.reload({ waitUntil: "networkidle" });
+    await page.locator("#draft-banner").waitFor({ state: "visible" });
+    await page.getByRole("button", { name: "恢复草稿" }).click();
+    assert.equal(await titleInput.inputValue(), staleDraftTitle);
+    await page.getByRole("button", { name: "保存配置" }).click();
+    await page.waitForFunction(() => document.getElementById("save-status")?.textContent === "配置已保存");
+    assert.equal((await (await fetch(`${baseUrl}/api/config`)).json()).basics.title, staleDraftTitle);
+
+    await page.evaluate(() => {
+      Object.keys(localStorage).filter((key) => key.startsWith("nnresume-draft")).forEach((key) => localStorage.removeItem(key));
+    });
+    await putConfig(original);
+    await page.reload({ waitUntil: "networkidle" });
+    await titleInput.waitFor();
+
     const initialZoom = Number((await page.locator("#zoom-value").innerText()).replace("%", ""));
     await page.locator("#zoom-in").click();
     await page.waitForFunction((previous) => Number(document.getElementById("zoom-value").textContent.replace("%", "")) > previous, initialZoom);
@@ -189,7 +230,6 @@ async function startLocalServer() {
     await page.frameLocator("#preview-frame").locator(".modern-page").waitFor();
     assert.equal(await page.getByRole("button", { name: /现代双栏/ }).getAttribute("class"), "template-card selected");
 
-    const titleInput = page.locator('[data-path="basics.title"]');
     await titleInput.fill(`${original.basics.title} E2E`);
     await page.frameLocator("#preview-frame").getByText(`${original.basics.title} E2E`).waitFor();
     await page.getByRole("button", { name: "保存配置" }).click();
@@ -219,6 +259,11 @@ async function startLocalServer() {
     await page.locator("#diff-dialog .button.primary").click();
     await historyCard.getByRole("button", { name: "恢复" }).click();
     await page.getByText(/已恢复，原配置备份为/).waitFor();
+    await page.locator('[data-tab="edit"]').click();
+    await titleInput.fill(`${original.basics.title} 恢复后保存`);
+    await page.getByRole("button", { name: "保存配置" }).click();
+    await page.waitForFunction(() => document.getElementById("save-status")?.textContent === "配置已保存");
+    assert.equal((await (await fetch(`${baseUrl}/api/config`)).json()).basics.title, `${original.basics.title} 恢复后保存`);
 
     const gitStatus = await (await fetch(`${baseUrl}/api/git/status`)).json();
     await page.locator('[data-tab="git"]').click();

@@ -2,6 +2,7 @@
   "use strict";
 
   const DRAFT_PREFIX = "nnresume-draft-v2";
+  const PREVIOUS_DRAFT_KEY = "nnresume-draft-v1";
   const LEGACY_DRAFT_KEY = "resume-manager-draft-v1";
   const THEME_KEY = "nnresume-theme-v1";
   const themeQuery = window.matchMedia("(prefers-color-scheme: dark)");
@@ -58,6 +59,7 @@
   const PREVIEW_ZOOM_STEP = 0.1;
   let previewTimer;
   let toastTimer;
+  let pendingDraft = null;
 
   const escapeHtml = (value) => String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -67,17 +69,39 @@
     .replace(/'/g, "&#039;");
   const clone = (value) => JSON.parse(JSON.stringify(value));
   const draftKey = () => `${DRAFT_PREFIX}:${state.workspaceId}:${state.revision || "unloaded"}`;
-  const readDraft = () => {
-    const current = localStorage.getItem(draftKey());
-    if (current) return JSON.parse(current);
-    const legacy = localStorage.getItem(LEGACY_DRAFT_KEY);
-    if (!legacy) return null;
-    return JSON.parse(legacy);
+  const readDraftEntry = (key) => {
+    const stored = localStorage.getItem(key);
+    if (!stored) return null;
+    try {
+      return { key, draft: JSON.parse(stored) };
+    } catch (_) {
+      localStorage.removeItem(key);
+      return null;
+    }
   };
-  const clearDraft = (key = draftKey()) => {
-    localStorage.removeItem(key);
-    localStorage.removeItem(LEGACY_DRAFT_KEY);
+  const findDraft = (config) => {
+    const current = readDraftEntry(draftKey());
+    if (current?.draft?.config && canonical(current.draft.config) !== canonical(config)) return current;
+    if (current) clearDraft(current.key);
+    const workspacePrefix = `${DRAFT_PREFIX}:${state.workspaceId}:`;
+    const candidates = [];
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (!key?.startsWith(workspacePrefix)) continue;
+      const entry = readDraftEntry(key);
+      if (entry?.draft?.config) candidates.push(entry);
+    }
+    [readDraftEntry(PREVIOUS_DRAFT_KEY), readDraftEntry(LEGACY_DRAFT_KEY)]
+      .filter((entry) => entry?.draft?.config)
+      .forEach((entry) => candidates.push(entry));
+    candidates.sort((left, right) => Number(right.draft.savedAt || 0) - Number(left.draft.savedAt || 0));
+    const recoverable = candidates.find((entry) => canonical(entry.draft.config) !== canonical(config));
+    candidates.filter((entry) => entry !== recoverable).forEach((entry) => {
+      if (canonical(entry.draft.config) === canonical(config)) clearDraft(entry.key);
+    });
+    return recoverable || null;
   };
+  const clearDraft = (key = draftKey()) => localStorage.removeItem(key);
   const readTheme = () => {
     try {
       const theme = localStorage.getItem(THEME_KEY);
@@ -455,10 +479,16 @@
 
   async function restoreExport(id) {
     if (!window.confirm(`恢复 ${id}？恢复前会自动备份当前配置。`)) return;
-    const result = await api(`/api/exports/${encodeURIComponent(id)}/restore`, { method: "POST", body: "{}" });
-    state.config = clone(result.config);
-    state.saved = clone(result.config);
-    clearDraft();
+    const previousDraftKey = draftKey();
+    const result = await api(`/api/exports/${encodeURIComponent(id)}/restore`, {
+      method: "POST",
+      headers: state.revision ? { "If-Match": `"${state.revision}"` } : {},
+      body: "{}",
+    });
+    const fresh = await loadConfigFromDisk();
+    state.config = clone(fresh);
+    state.saved = clone(fresh);
+    clearDraft(previousDraftKey);
     renderEditor();
     postPreview();
     await Promise.all([loadHistory(), loadGit()]);
@@ -588,10 +618,10 @@
 
   function setupDraft(config) {
     try {
-      const draft = readDraft();
-      if (draft?.config && canonical(draft.config) !== canonical(config)) elements.draftBanner.hidden = false;
+      pendingDraft = findDraft(config);
+      if (pendingDraft) elements.draftBanner.hidden = false;
     } catch (_) {
-      clearDraft();
+      pendingDraft = null;
     }
   }
 
@@ -640,14 +670,18 @@
       if (button.dataset.historyAction === "restore") restoreExport(button.dataset.id).catch((error) => showToast(error.message));
     });
     document.getElementById("restore-draft").addEventListener("click", () => {
-      const draft = readDraft();
+      if (!pendingDraft?.draft?.config) return;
+      const { draft, key } = pendingDraft;
+      clearDraft(key);
+      pendingDraft = null;
       state.config = clone(draft.config);
       elements.draftBanner.hidden = true;
       renderEditor();
       markChanged();
     });
     document.getElementById("discard-draft").addEventListener("click", () => {
-      clearDraft();
+      if (pendingDraft) clearDraft(pendingDraft.key);
+      pendingDraft = null;
       elements.draftBanner.hidden = true;
     });
     elements.frame.addEventListener("load", () => {
